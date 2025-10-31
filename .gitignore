@@ -1,0 +1,10 @@
+*.sv
+*.v
+.bloop
+.bsp
+.metals
+.scala-build
+build
+filelist.f
+project
+target
