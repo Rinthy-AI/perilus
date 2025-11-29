@@ -9,5 +9,6 @@ pkgs.mkShellNoCC {
     metals
     sbt
     scalafmt
+    verilator
   ];
 }
