@@ -28,4 +28,3 @@ class ControlUnit extends Module {
   io.regWrite := 0.U
   io.resultSrc := 0.U
 }
-

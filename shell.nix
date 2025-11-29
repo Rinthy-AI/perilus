@@ -7,9 +7,7 @@ pkgs.mkShellNoCC {
   packages = with pkgs; [
     jdk21
     metals
-    mill
     sbt
-    scala-cli
-    verilator
+    scalafmt
   ];
 }
