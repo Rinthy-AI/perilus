@@ -1,6 +1,7 @@
 import chisel3._
 import chisel3.simulator.scalatest.ChiselSim
 import org.scalatest.funspec.AnyFunSpec
+
 import com.rinthyAi.perilus.extendUnit._
 
 class ExtendUnitTests extends AnyFunSpec with ChiselSim {

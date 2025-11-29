@@ -10,6 +10,17 @@ class Alu extends Module {
     val aluResult = Output(UInt(32.W))
   })
 
-  // TODO implement
-  io.aluResult := 0.U
+  when(io.aluControl === "b000".U) {
+    io.aluResult := io.srcA + io.srcB
+  }.elsewhen(io.aluControl === "b001".U) {
+    io.aluResult := io.srcA - io.srcB
+  }.elsewhen(io.aluControl === "b010".U) {
+    io.aluResult := io.srcA & io.srcB
+  }.elsewhen(io.aluControl === "b011".U) {
+    io.aluResult := io.srcA | io.srcB
+  }.elsewhen(io.aluControl === "b101".U) {
+    io.aluResult := io.srcA < io.srcB
+  }.otherwise {
+    io.aluResult := 0.U
+  }
 }
