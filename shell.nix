@@ -5,10 +5,10 @@ in
 
 pkgs.mkShellNoCC {
   packages = with pkgs; [
+    act
     jdk21
     metals
     sbt
-    scalafmt
     verilator
   ];
 }
