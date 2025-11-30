@@ -22,7 +22,7 @@ class Perilus extends Module {
   val alu = Module(new Alu())
   val controlUnit = Module(new ControlUnit())
   val extendUnit = Module(new ExtendUnit())
-  val memory = Module(new Memory())
+  val memory = Module(new Memory(1024, 32.W))
   val registerFile = Module(new RegisterFile())
 
   // TODO connect inputs and outputs
