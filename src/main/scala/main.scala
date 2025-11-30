@@ -19,11 +19,14 @@ import com.rinthyAi.perilus.controlUnit._
 class Perilus extends Module {
   val io = IO(new Bundle {})
 
+  val width = 32.W
+  val memorySizeWords = 1024
+
   val alu = Module(new Alu())
   val controlUnit = Module(new ControlUnit())
   val extendUnit = Module(new ExtendUnit())
-  val memory = Module(new Memory(1024, 32.W))
-  val registerFile = Module(new RegisterFile())
+  val memory = Module(new Memory(memorySizeWords, width))
+  val registerFile = Module(new RegisterFile(width))
 
   // TODO connect inputs and outputs
 
