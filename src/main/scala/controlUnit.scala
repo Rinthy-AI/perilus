@@ -7,7 +7,7 @@ class ControlUnit extends Module {
   val io = IO(new Bundle {
     val op = Input(UInt(7.W))
     val funct3 = Input(UInt(3.W))
-    val funct7 = Input(Bool())
+    val funct7_5 = Input(Bool())
 
     val adrSrc, branch, irWrite, memWrite, pcUpdate, pcWrite, regWrite = Output(Bool())
     val aluSrcA, aluSrcB, aluOp, immSrc, resultSrc = Output(UInt(2.W))
