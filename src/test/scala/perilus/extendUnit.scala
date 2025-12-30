@@ -9,7 +9,7 @@ class ExtendUnitTests extends AnyFunSpec with ChiselSim {
     it("correctly extends I-type immediates") {
       simulate(new ExtendUnit) { extendUnit =>
         {
-          extendUnit.io.immSrc.poke("b00".U)
+          extendUnit.io.immSrc.poke(ImmSrc.iType)
 
           extendUnit.io.input.poke("hdc4691".U) // immediate value is 0xe9b
           extendUnit.io.immExt.expect("h6e2".U)
@@ -22,7 +22,7 @@ class ExtendUnitTests extends AnyFunSpec with ChiselSim {
     it("correctly extends S-type immediates") {
       simulate(new ExtendUnit) { extendUnit =>
         {
-          extendUnit.io.immSrc.poke("b01".U)
+          extendUnit.io.immSrc.poke(ImmSrc.sType)
 
           extendUnit.io.input.poke("h65b22a".U) // immediate value is 0x32a
           extendUnit.io.immExt.expect("h32a".U)
@@ -35,7 +35,7 @@ class ExtendUnitTests extends AnyFunSpec with ChiselSim {
     it("correctly extends B-type immediates") {
       simulate(new ExtendUnit) { extendUnit =>
         {
-          extendUnit.io.immSrc.poke("b10".U)
+          extendUnit.io.immSrc.poke(ImmSrc.bType)
 
           extendUnit.io.input.poke("hcbee9".U) // immediate value is 0x868
           extendUnit.io.immExt.expect("h868".U)
@@ -45,16 +45,16 @@ class ExtendUnitTests extends AnyFunSpec with ChiselSim {
         }
       }
     }
-    it("outputs zero when immSrc is invalid") {
+    it("correctly extends J-type immediates") {
       simulate(new ExtendUnit) { extendUnit =>
         {
-          extendUnit.io.immSrc.poke("b11".U)
+          extendUnit.io.immSrc.poke(ImmSrc.jType)
 
-          extendUnit.io.input.poke("hb2a945".U)
-          extendUnit.io.immExt.expect(0.U)
+          extendUnit.io.input.poke("h8cfe3".U) // immediate value is 0x7f046
+          extendUnit.io.immExt.expect("h7f046".U)
 
-          extendUnit.io.input.poke("h1f800d2".U)
-          extendUnit.io.immExt.expect(0.U)
+          extendUnit.io.input.poke("h11c2c1c".U) // immediate value is 0x1608e0
+          extendUnit.io.immExt.expect("hfff608e0".U)
         }
       }
     }

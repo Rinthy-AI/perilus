@@ -9,7 +9,7 @@ class AluTests extends AnyFunSpec with ChiselSim {
     it("adds") {
       simulate(new Alu) { alu =>
         {
-          alu.io.aluControl.poke("b000".U)
+          alu.io.aluControl.poke(AluControl.add)
 
           alu.io.srcA.poke("hb589e285".U)
           alu.io.srcB.poke("hc4289503".U)
@@ -28,7 +28,7 @@ class AluTests extends AnyFunSpec with ChiselSim {
     it("subtracts") {
       simulate(new Alu) { alu =>
         {
-          alu.io.aluControl.poke("b001".U)
+          alu.io.aluControl.poke(AluControl.sub)
 
           alu.io.srcA.poke("hceab249".U)
           alu.io.srcB.poke("h124a55c3".U)
@@ -47,7 +47,7 @@ class AluTests extends AnyFunSpec with ChiselSim {
     it("computes bitwise AND") {
       simulate(new Alu) { alu =>
         {
-          alu.io.aluControl.poke("b010".U)
+          alu.io.aluControl.poke(AluControl.and)
 
           alu.io.srcA.poke("h9ae8ddd".U)
           alu.io.srcB.poke("ha8387b0c".U)
@@ -66,7 +66,7 @@ class AluTests extends AnyFunSpec with ChiselSim {
     it("computes bitwise OR") {
       simulate(new Alu) { alu =>
         {
-          alu.io.aluControl.poke("b011".U)
+          alu.io.aluControl.poke(AluControl.or)
 
           alu.io.srcA.poke("hf4f16d52".U)
           alu.io.srcB.poke("h2f6464a1".U)
@@ -85,7 +85,7 @@ class AluTests extends AnyFunSpec with ChiselSim {
     it("computes set if less than (SLT)") {
       simulate(new Alu) { alu =>
         {
-          alu.io.aluControl.poke("b101".U)
+          alu.io.aluControl.poke(AluControl.slt)
 
           alu.io.srcA.poke("h8a831306".U)
           alu.io.srcB.poke("h6e7ec46f".U)
@@ -98,29 +98,6 @@ class AluTests extends AnyFunSpec with ChiselSim {
           alu.io.srcA.poke("h33b6db74".U)
           alu.io.srcB.poke("hd6faaa4d".U)
           alu.io.aluResult.expect(1.U)
-        }
-      }
-    }
-    it("outputs zero when aluControl is invalid") {
-      simulate(new Alu) { alu =>
-        {
-          alu.io.aluControl.poke("b100".U)
-
-          alu.io.srcA.poke("hbe4fb61f".U)
-          alu.io.srcB.poke("h1ea6db5b".U)
-          alu.io.aluResult.expect(0.U)
-
-          alu.io.aluControl.poke("b110".U)
-
-          alu.io.srcA.poke("h9ba3e41f".U)
-          alu.io.srcB.poke("h33abf507".U)
-          alu.io.aluResult.expect(0.U)
-
-          alu.io.aluControl.poke("b111".U)
-
-          alu.io.srcA.poke("h6cd9a65b".U)
-          alu.io.srcB.poke("h104e5235".U)
-          alu.io.aluResult.expect(0.U)
         }
       }
     }

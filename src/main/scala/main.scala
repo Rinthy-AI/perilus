@@ -8,6 +8,7 @@
 package com.rinthyAi.perilus.main
 
 import chisel3._
+import chisel3.util._
 import _root_.circt.stage.ChiselStage
 
 import com.rinthyAi.perilus.alu._
@@ -56,35 +57,48 @@ class Perilus extends Module {
   aluOutBuf := alu.io.aluResult
 
   val result = WireDefault(0.U(width))
-  when(controlUnit.io.resultSrc === "b00".U) {
-    result := aluOutBuf
-  }.elsewhen(controlUnit.io.resultSrc === "b01".U) {
-    result := readDataBuf
-  }.elsewhen(controlUnit.io.resultSrc === "b10".U) {
-    result := alu.io.aluResult
+  switch(controlUnit.io.resultSrc) {
+    is(ResultSrc.aluOutBuf) {
+      result := aluOutBuf
+    }
+    is(ResultSrc.readDataBuf) {
+      result := readDataBuf
+    }
+    is(ResultSrc.aluResult) {
+      result := alu.io.aluResult
+    }
   }
 
   alu.io.aluControl := controlUnit.io.aluControl
-  when(controlUnit.io.aluSrcA === "b00".U) {
-    alu.io.srcA := pc
-  }.elsewhen(controlUnit.io.aluSrcA === "b01".U) {
-    alu.io.srcA := oldPc
-  }.elsewhen(controlUnit.io.aluSrcA === "b10".U) {
-    alu.io.srcA := rd1Buf
-  }.otherwise {
-    alu.io.srcA := 0.U
+  alu.io.srcA := DontCare
+  alu.io.srcB := DontCare
+  switch(controlUnit.io.aluSrcA) {
+    is(AluSrcA.pc) {
+      alu.io.srcA := pc
+    }
+    is(AluSrcA.oldPc) {
+      alu.io.srcA := oldPc
+    }
+    is(AluSrcA.rd1) {
+      alu.io.srcA := rd1Buf
+    }
   }
-  when(controlUnit.io.aluSrcB === "b00".U) {
-    alu.io.srcB := rd2Buf
-  }.elsewhen(controlUnit.io.aluSrcB === "b01".U) {
-    alu.io.srcB := extendUnit.io.immExt
-  }.elsewhen(controlUnit.io.aluSrcB === "b10".U) {
-    alu.io.srcB := 4.U
-  }.otherwise {
-    alu.io.srcB := 0.U
+  switch(controlUnit.io.aluSrcB) {
+    is(AluSrcB.rd2) {
+      alu.io.srcB := rd2Buf
+    }
+    is(AluSrcB.immExt) {
+      alu.io.srcB := extendUnit.io.immExt
+    }
+    is(AluSrcB.four) {
+      alu.io.srcB := 4.U
+    }
   }
+  controlUnit.io.zero := alu.io.zero
 
-  controlUnit.io.op := instr(6, 0)
+  val (opcode, opcodeValid) = Opcode.safe(instr(6, 0))
+  assert(opcodeValid, "Got invalid opcode: 0b%b", instr(6, 0))
+  controlUnit.io.op := opcode
   controlUnit.io.funct3 := instr(14, 12)
   controlUnit.io.funct7_5 := instr(30)
 

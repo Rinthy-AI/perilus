@@ -1,30 +1,195 @@
 package com.rinthyAi.perilus.controlUnit
 
 import chisel3._
+import chisel3.util._
 
-// Figure 7.28 (page 423)
+import com.rinthyAi.perilus.alu._
+import com.rinthyAi.perilus.extendUnit._
+
 class ControlUnit extends Module {
+  // Figure 7.28 (page 423)
   val io = IO(new Bundle {
-    val op = Input(UInt(7.W))
+    val op = Input(Opcode())
     val funct3 = Input(UInt(3.W))
     val funct7_5 = Input(Bool())
-
-    val adrSrc, branch, irWrite, memWrite, pcUpdate, pcWrite, regWrite = Output(Bool())
-    val aluSrcA, aluSrcB, aluOp, immSrc, resultSrc = Output(UInt(2.W))
-    val aluControl = Output(UInt(3.W))
+    val zero = Input(Bool())
+    val adrSrc, irWrite, memWrite, pcWrite, regWrite = Output(Bool())
+    val aluSrcA = Output(AluSrcA())
+    val aluSrcB = Output(AluSrcB())
+    val resultSrc = Output(ResultSrc())
+    val immSrc = Output(ImmSrc())
+    val aluControl = Output(AluControl())
   })
 
-  io.adrSrc := 0.U
-  io.aluControl := 0.U
-  io.aluOp := 0.U
-  io.aluSrcA := 0.U
-  io.aluSrcB := 0.U
-  io.branch := 0.U
-  io.immSrc := 0.U
-  io.irWrite := 0.U
-  io.memWrite := 0.U
-  io.pcUpdate := 0.U
-  io.pcWrite := 0.U
-  io.regWrite := 0.U
-  io.resultSrc := 0.U
+  val state = RegInit(ControlUnitState.fetch)
+
+  val aluOp = WireDefault(AluOp.memory)
+  val branch, pcUpdate = WireDefault(false.B)
+
+  io.adrSrc := DontCare
+  io.aluControl := DontCare
+  io.aluSrcA := DontCare
+  io.aluSrcB := DontCare
+  io.immSrc := DontCare
+  io.irWrite := DontCare
+  io.memWrite := DontCare
+  io.regWrite := DontCare
+  io.resultSrc := DontCare
+
+  // Main FSM (Figure 7.45, page 436)
+  switch(state) {
+    is(ControlUnitState.fetch) {
+      io.adrSrc := false.B
+      io.irWrite := true.B
+      io.aluSrcA := AluSrcA.pc
+      io.aluSrcB := AluSrcB.four
+      aluOp := AluOp.memory
+      io.resultSrc := ResultSrc.aluResult
+      pcUpdate := true.B
+      state := ControlUnitState.decode
+    }
+    is(ControlUnitState.decode) {
+      io.aluSrcA := AluSrcA.oldPc
+      io.aluSrcB := AluSrcB.immExt
+      aluOp := AluOp.memory
+      when(io.op === Opcode.load || io.op === Opcode.store) {
+        state := ControlUnitState.memAdr
+      }.elsewhen(io.op === Opcode.rType) {
+        state := ControlUnitState.executeR
+      }.elsewhen(io.op === Opcode.immediate) {
+        state := ControlUnitState.executeI
+      }.elsewhen(io.op === Opcode.jal) {
+        state := ControlUnitState.jal
+      }.elsewhen(io.op === Opcode.branch) {
+        state := ControlUnitState.beq
+      }
+    }
+    is(ControlUnitState.memAdr) {
+      io.aluSrcA := AluSrcA.rd1
+      io.aluSrcB := AluSrcB.immExt
+      aluOp := AluOp.memory
+      switch(io.op) {
+        is(Opcode.load) {
+          state := ControlUnitState.memRead
+        }
+        is(Opcode.store) {
+          state := ControlUnitState.memWrite
+        }
+      }
+    }
+    is(ControlUnitState.memRead) {
+      io.resultSrc := ResultSrc.aluOutBuf
+      io.adrSrc := true.B
+      state := ControlUnitState.memWb
+    }
+    is(ControlUnitState.memWb) {
+      io.resultSrc := ResultSrc.readDataBuf
+      io.regWrite := true.B
+      state := ControlUnitState.fetch
+    }
+    is(ControlUnitState.memWrite) {
+      io.resultSrc := ResultSrc.aluOutBuf
+      io.adrSrc := true.B
+      io.memWrite := true.B
+      state := ControlUnitState.fetch
+    }
+    is(ControlUnitState.executeR) {
+      io.aluSrcA := AluSrcA.rd1
+      io.aluSrcB := AluSrcB.rd2
+      aluOp := AluOp.arithmetic
+      state := ControlUnitState.aluWb
+    }
+    is(ControlUnitState.aluWb) {
+      io.resultSrc := ResultSrc.aluOutBuf
+      io.regWrite := true.B
+      state := ControlUnitState.fetch
+    }
+    is(ControlUnitState.executeI) {
+      io.aluSrcA := AluSrcA.rd1
+      io.aluSrcB := AluSrcB.immExt
+      aluOp := AluOp.arithmetic
+      state := ControlUnitState.aluWb
+    }
+    is(ControlUnitState.jal) {
+      io.aluSrcA := AluSrcA.oldPc
+      io.aluSrcB := AluSrcB.four
+      io.resultSrc := ResultSrc.aluOutBuf
+      aluOp := AluOp.memory
+      pcUpdate := true.B
+      state := ControlUnitState.aluWb
+    }
+    is(ControlUnitState.beq) {
+      io.aluSrcA := AluSrcA.rd1
+      io.aluSrcB := AluSrcB.rd2
+      io.resultSrc := ResultSrc.aluOutBuf
+      aluOp := AluOp.branch
+      branch := true.B
+      state := ControlUnitState.fetch
+    }
+  }
+
+  io.pcWrite := (io.zero && branch) || pcUpdate
+
+  // ALU Decoder (Table 7.3, page 409)
+  switch(aluOp) {
+    is(AluOp.memory) {
+      io.aluControl := AluControl.add
+    }
+    is(AluOp.branch) {
+      io.aluControl := AluControl.sub
+    }
+    is(AluOp.arithmetic) {
+      when(
+        io.funct3 === "b000".U && ((!io.op.asUInt(5) && !io.funct7_5) || (!io.op.asUInt(
+          5
+        ) && io.funct7_5) || (io.op.asUInt(5) && !io.funct7_5))
+      ) {
+        io.aluControl := AluControl.add
+      }.elsewhen(io.funct3 === "b000".U && io.op.asUInt(5) && io.funct7_5) {
+        io.aluControl := AluControl.sub
+      }.elsewhen(io.funct3 === "b010".U) {
+        io.aluControl := AluControl.slt
+      }.elsewhen(io.funct3 === "b110".U) {
+        io.aluControl := AluControl.or
+      }.elsewhen(io.funct3 === "b111".U) {
+        io.aluControl := AluControl.and
+      }
+    }
+  }
+
+  // Instruction Decoder (Table 7.6, page 413)
+  switch(io.op) {
+    is(Opcode.load) {
+      io.immSrc := ImmSrc.iType
+    }
+    is(Opcode.store) {
+      io.immSrc := ImmSrc.sType
+    }
+    is(Opcode.branch) {
+      io.immSrc := ImmSrc.bType
+    }
+    is(Opcode.immediate) {
+      io.immSrc := ImmSrc.iType
+    }
+    is(Opcode.jal) {
+      io.immSrc := ImmSrc.jType
+    }
+  }
+}
+
+object ControlUnitState extends ChiselEnum {
+  val fetch, decode, memAdr, memRead, memWb, memWrite, executeR, aluWb, executeI, jal, beq = Value
+}
+
+object Opcode extends ChiselEnum {
+  val load = Value("b0000011".U)
+  val immediate = Value("b0010011".U)
+  val auipc = Value("b0010111".U)
+  val store = Value("b0100011".U)
+  val rType = Value("b0110011".U)
+  val lui = Value("b0110111".U)
+  val branch = Value("b1100011".U)
+  val jalr = Value("b1100111".U)
+  val jal = Value("b1101111".U)
+  val env = Value("b1110011".U)
 }
