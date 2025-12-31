@@ -6,7 +6,7 @@ import chisel3.util._
 import com.rinthyAi.perilus.alu._
 import com.rinthyAi.perilus.extendUnit._
 
-class ControlUnit extends Module {
+class ControlUnit(withDebug: Boolean = false) extends Module {
   // Figure 7.28 (page 423)
   val io = IO(new Bundle {
     val op = Input(Opcode())
@@ -19,9 +19,17 @@ class ControlUnit extends Module {
     val resultSrc = Output(ResultSrc())
     val immSrc = Output(ImmSrc())
     val aluControl = Output(AluControl())
+    val debug = if (withDebug) Some(Output(new Bundle {
+      val state = ControlUnitState()
+    }))
+    else None
   })
 
   val state = RegInit(ControlUnitState.fetch)
+
+  io.debug.foreach(d => {
+    d.state := state
+  })
 
   val aluOp = WireDefault(AluOp.memory)
   val branch, pcUpdate = WireDefault(false.B)
