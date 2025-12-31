@@ -25,6 +25,9 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
     else None
   })
 
+  val aluDecoder = Module(new AluDecoder())
+  val instrDecoder = Module(new InstructionDecoder())
+
   val state = RegInit(ControlUnitState.fetch)
 
   io.debug.foreach(d => {
@@ -35,10 +38,8 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
   val branch, pcUpdate = WireDefault(false.B)
 
   io.adrSrc := DontCare
-  io.aluControl := DontCare
   io.aluSrcA := DontCare
   io.aluSrcB := DontCare
-  io.immSrc := DontCare
   io.irWrite := DontCare
   io.memWrite := DontCare
   io.regWrite := DontCare
@@ -138,8 +139,29 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
 
   io.pcWrite := (io.zero && branch) || pcUpdate
 
-  // ALU Decoder (Table 7.3, page 409)
-  switch(aluOp) {
+  aluDecoder.io.aluOp := aluOp
+  aluDecoder.io.funct3 := io.funct3
+  aluDecoder.io.funct7_5 := io.funct7_5
+  aluDecoder.io.op := io.op
+  io.aluControl := aluDecoder.io.aluControl
+
+  instrDecoder.io.op := io.op
+  io.immSrc := instrDecoder.io.immSrc
+}
+
+// ALU Decoder (Table 7.3, page 409)
+class AluDecoder extends Module {
+  val io = IO(new Bundle {
+    val aluOp = Input(AluOp())
+    val funct3 = Input(UInt(3.W))
+    val funct7_5 = Input(Bool())
+    val op = Input(Opcode())
+    val aluControl = Output(AluControl())
+  })
+
+  io.aluControl := DontCare
+
+  switch(io.aluOp) {
     is(AluOp.memory) {
       io.aluControl := AluControl.add
     }
@@ -164,8 +186,17 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
       }
     }
   }
+}
 
-  // Instruction Decoder (Table 7.6, page 413)
+// Instruction Decoder (Table 7.6, page 413)
+class InstructionDecoder extends Module {
+  val io = IO(new Bundle {
+    val op = Input(Opcode())
+    val immSrc = Output(ImmSrc())
+  })
+
+  io.immSrc := DontCare
+
   switch(io.op) {
     is(Opcode.load) {
       io.immSrc := ImmSrc.iType

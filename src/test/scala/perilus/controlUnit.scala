@@ -2,9 +2,11 @@ import chisel3._
 import chisel3.simulator.scalatest.ChiselSim
 import org.scalatest.funspec.AnyFunSpec
 
+import com.rinthyAi.perilus.alu._
 import com.rinthyAi.perilus.controlUnit._
+import com.rinthyAi.perilus.extendUnit._
 
-class ControlUnitFsmTests extends AnyFunSpec with ChiselSim {
+class ControlUnitTests extends AnyFunSpec with ChiselSim {
   def checkFsmStates(dut: ControlUnit, states: List[ControlUnitState.Type]) = {
     val debug = dut.io.debug.get
     debug.state.expect(states.head)
@@ -14,6 +16,36 @@ class ControlUnitFsmTests extends AnyFunSpec with ChiselSim {
     })
     dut.clock.step(1)
     debug.state.expect(states.head)
+  }
+  describe("AluDecoder") {
+    it("decodes correctly") {
+      simulate(new AluDecoder) { aluDecoder =>
+        {
+          aluDecoder.io.funct3.poke(0.U)
+          aluDecoder.io.funct7_5.poke(false.B)
+          aluDecoder.io.op.poke(Opcode.rType)
+
+          aluDecoder.io.aluOp.poke(AluOp.memory)
+          aluDecoder.io.aluControl.expect(AluControl.add)
+
+          aluDecoder.io.aluOp.poke(AluOp.branch)
+          aluDecoder.io.aluControl.expect(AluControl.sub)
+
+          aluDecoder.io.aluOp.poke(AluOp.arithmetic)
+          aluDecoder.io.op.poke(Opcode.immediate)
+          aluDecoder.io.aluControl.expect(AluControl.add)
+          aluDecoder.io.op.poke(Opcode.rType)
+          aluDecoder.io.funct7_5.poke(true.B)
+          aluDecoder.io.aluControl.expect(AluControl.sub)
+          aluDecoder.io.funct3.poke("b010".U)
+          aluDecoder.io.aluControl.expect(AluControl.slt)
+          aluDecoder.io.funct3.poke("b110".U)
+          aluDecoder.io.aluControl.expect(AluControl.or)
+          aluDecoder.io.funct3.poke("b111".U)
+          aluDecoder.io.aluControl.expect(AluControl.and)
+        }
+      }
+    }
   }
   describe("ControlUnit") {
     it("controls the beq instruction") {
@@ -127,6 +159,24 @@ class ControlUnitFsmTests extends AnyFunSpec with ChiselSim {
           )
 
           checkFsmStates(controlUnit, states)
+        }
+      }
+    }
+  }
+  describe("InstructionDecoder") {
+    it("decodes correctly") {
+      simulate(new InstructionDecoder) { instrDecoder =>
+        {
+          instrDecoder.io.op.poke(Opcode.load)
+          instrDecoder.io.immSrc.expect(ImmSrc.iType)
+          instrDecoder.io.op.poke(Opcode.store)
+          instrDecoder.io.immSrc.expect(ImmSrc.sType)
+          instrDecoder.io.op.poke(Opcode.branch)
+          instrDecoder.io.immSrc.expect(ImmSrc.bType)
+          instrDecoder.io.op.poke(Opcode.immediate)
+          instrDecoder.io.immSrc.expect(ImmSrc.iType)
+          instrDecoder.io.op.poke(Opcode.jal)
+          instrDecoder.io.immSrc.expect(ImmSrc.jType)
         }
       }
     }
