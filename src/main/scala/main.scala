@@ -10,6 +10,8 @@ package com.rinthyAi.perilus.main
 import chisel3._
 import chisel3.util._
 import _root_.circt.stage.ChiselStage
+import scala.collection.mutable.ArrayBuffer
+import scala.io.Source
 
 import com.rinthyAi.perilus.alu._
 import com.rinthyAi.perilus.extendUnit._
@@ -17,17 +19,49 @@ import com.rinthyAi.perilus.memory._
 import com.rinthyAi.perilus.registerFile._
 import com.rinthyAi.perilus.controlUnit._
 
-class Perilus extends Module {
-  val io = IO(new Bundle {})
-
+class Perilus(
+    initRegs: String = "",
+    initMem: String = "",
+    withDebug: Boolean = false
+) extends Module {
   val width = 32.W
-  val memorySizeWords = 1024
+  val memorySizeWords = if (initMem.nonEmpty) {
+    Source.fromFile(initMem).getLines().size
+  } else { 1024 }
+
+  val io = IO(new Bundle {
+    val memory = Module(new Memory(memorySizeWords, width, initMem, withDebug))
+    val registerFile = Module(new RegisterFile(width, initRegs, withDebug))
+    val debug =
+      if (withDebug) Some(new Bundle {
+        val reg = Input(UInt(5.W))
+        val regData = Output(UInt(width))
+        val memAddr = Input(UInt(width))
+        val memData = Output(UInt(width))
+      })
+      else None
+  })
+
+  io.registerFile.io.debug.foreach(r => {
+    r.reg := 0.U
+  })
+  io.memory.io.debug.foreach(m => {
+    m.memAddr := 0.U
+  })
+  io.debug.foreach(d => {
+    io.registerFile.io.debug.foreach(r => {
+      r.reg := d.reg
+      d.regData := r.regData
+    })
+    io.memory.io.debug.foreach(m => {
+      m.memAddr := d.memAddr
+      d.memData := m.memData
+    })
+  })
 
   val alu = Module(new Alu())
   val controlUnit = Module(new ControlUnit())
   val extendUnit = Module(new ExtendUnit())
-  val memory = Module(new Memory(memorySizeWords, width))
-  val registerFile = Module(new RegisterFile(width))
 
   val pc = RegInit(0.U(width))
   val pcNext = WireDefault(UInt(width), 0.U)
@@ -42,16 +76,16 @@ class Perilus extends Module {
 
   val instr = RegInit(0.U(width))
   when(controlUnit.io.irWrite) {
-    instr := memory.io.readData
+    instr := io.memory.io.readData
   }
 
   val readDataBuf = RegInit(0.U(width))
-  readDataBuf := memory.io.readData
+  readDataBuf := io.memory.io.readData
 
   val rd1Buf = RegInit(0.U(width))
-  rd1Buf := registerFile.io.rd1
+  rd1Buf := io.registerFile.io.rd1
   val rd2Buf = RegInit(0.U(width))
-  rd2Buf := registerFile.io.rd2
+  rd2Buf := io.registerFile.io.rd2
 
   val aluOutBuf = RegInit(0.U(width))
   aluOutBuf := alu.io.aluResult
@@ -70,8 +104,8 @@ class Perilus extends Module {
   }
 
   alu.io.aluControl := controlUnit.io.aluControl
-  alu.io.srcA := DontCare
-  alu.io.srcB := DontCare
+  alu.io.srcA := 0.U
+  alu.io.srcB := 0.U
   switch(controlUnit.io.aluSrcA) {
     is(AluSrcA.pc) {
       alu.io.srcA := pc
@@ -97,7 +131,6 @@ class Perilus extends Module {
   controlUnit.io.zero := alu.io.zero
 
   val (opcode, opcodeValid) = Opcode.safe(instr(6, 0))
-  assert(opcodeValid, "Got invalid opcode: 0b%b", instr(6, 0))
   controlUnit.io.op := opcode
   controlUnit.io.funct3 := instr(14, 12)
   controlUnit.io.funct7_5 := instr(30)
@@ -106,18 +139,18 @@ class Perilus extends Module {
   extendUnit.io.immSrc := controlUnit.io.immSrc
 
   when(controlUnit.io.adrSrc) {
-    memory.io.address := result
+    io.memory.io.address := result
   }.otherwise {
-    memory.io.address := pc
+    io.memory.io.address := pc
   }
-  memory.io.writeData := rd2Buf
-  memory.io.writeEnable := controlUnit.io.memWrite
+  io.memory.io.writeData := rd2Buf
+  io.memory.io.writeEnable := controlUnit.io.memWrite
 
-  registerFile.io.a1 := instr(19, 15)
-  registerFile.io.a2 := instr(24, 20)
-  registerFile.io.a3 := instr(11, 7)
-  registerFile.io.writeData3 := result
-  registerFile.io.writeEnable3 := controlUnit.io.regWrite
+  io.registerFile.io.a1 := instr(19, 15)
+  io.registerFile.io.a2 := instr(24, 20)
+  io.registerFile.io.a3 := instr(11, 7)
+  io.registerFile.io.writeData3 := result
+  io.registerFile.io.writeEnable3 := controlUnit.io.regWrite
 }
 
 object Perilus extends App {

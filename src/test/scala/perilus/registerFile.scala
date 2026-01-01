@@ -7,7 +7,9 @@ import com.rinthyAi.perilus.registerFile._
 class RegisterFileTests extends AnyFunSpec with ChiselSim {
   describe("RegisterFile") {
     it("stores and retrieves data") {
-      simulate(new RegisterFile(32.W)) { registerFile =>
+      simulate(
+        new RegisterFile(32.W, System.getProperty("user.dir") + "/assets/reg-zeros-x32.hex")
+      ) { registerFile =>
         {
           val reg1 = 5.U
           val reg2 = 19.U
@@ -44,7 +46,9 @@ class RegisterFileTests extends AnyFunSpec with ChiselSim {
       }
     }
     it("doesn't write to x0") {
-      simulate(new RegisterFile(32.W)) { registerFile =>
+      simulate(
+        new RegisterFile(32.W, System.getProperty("user.dir") + "/assets/reg-zeros-x32.hex")
+      ) { registerFile =>
         {
           registerFile.io.a3.poke(0.U)
           registerFile.io.writeData3.poke("h500bc902".U)

@@ -6,6 +6,7 @@ in
 pkgs.mkShellNoCC {
   packages = with pkgs; [
     act
+    coursier
     jdk21
     metals
     sbt

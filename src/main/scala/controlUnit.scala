@@ -37,13 +37,13 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
   val aluOp = WireDefault(AluOp.memory)
   val branch, pcUpdate = WireDefault(false.B)
 
-  io.adrSrc := DontCare
-  io.aluSrcA := DontCare
-  io.aluSrcB := DontCare
-  io.irWrite := DontCare
-  io.memWrite := DontCare
-  io.regWrite := DontCare
-  io.resultSrc := DontCare
+  io.adrSrc := false.B
+  io.aluSrcA := AluSrcA.pc
+  io.aluSrcB := AluSrcB.rd2
+  io.irWrite := false.B
+  io.memWrite := false.B
+  io.regWrite := false.B
+  io.resultSrc := ResultSrc.aluOutBuf
 
   // Main FSM (Figure 7.45, page 436)
   switch(state) {
@@ -159,7 +159,7 @@ class AluDecoder extends Module {
     val aluControl = Output(AluControl())
   })
 
-  io.aluControl := DontCare
+  io.aluControl := AluControl.add
 
   switch(io.aluOp) {
     is(AluOp.memory) {
@@ -195,7 +195,7 @@ class InstructionDecoder extends Module {
     val immSrc = Output(ImmSrc())
   })
 
-  io.immSrc := DontCare
+  io.immSrc := ImmSrc.iType
 
   switch(io.op) {
     is(Opcode.load) {

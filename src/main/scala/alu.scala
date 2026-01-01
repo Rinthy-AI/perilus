@@ -11,7 +11,7 @@ class Alu extends Module {
     val zero = Output(Bool())
   })
 
-  io.aluResult := DontCare
+  io.aluResult := 0.U
 
   switch(io.aluControl) {
     is(AluControl.add) {
