@@ -10,8 +10,8 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
     it("executes lw") {
       simulate(
         new Perilus(
-          initRegs = "/home/bradley/Projects/perilus/assets/reg-lw-x32.hex",
-          initMem = "/home/bradley/Projects/perilus/assets/mem-lw-64x32.hex",
+          initRegs = System.getProperty("user.dir") + "/assets/reg-lw-x32.hex",
+          initMem = System.getProperty("user.dir") + "/assets/mem-lw-64x32.hex",
           withDebug = true
         )
       ) { perilus =>
