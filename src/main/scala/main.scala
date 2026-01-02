@@ -32,6 +32,7 @@ class Perilus(
   val io = IO(new Bundle {
     val memory = Module(new Memory(memorySizeWords, width, initMem, withDebug))
     val registerFile = Module(new RegisterFile(width, initRegs, withDebug))
+    val pc = Output(UInt(width))
     val debug =
       if (withDebug) Some(new Bundle {
         val reg = Input(UInt(5.W))
@@ -69,6 +70,8 @@ class Perilus(
     pc := pcNext
   }
 
+  io.pc := pc
+
   val oldPc = RegInit(0.U(width))
   when(controlUnit.io.irWrite) {
     oldPc := pc
@@ -90,7 +93,10 @@ class Perilus(
   val aluOutBuf = RegInit(0.U(width))
   aluOutBuf := alu.io.aluResult
 
+  printf(cf"aluOutBuf = $aluOutBuf\n")
+
   val result = WireDefault(0.U(width))
+  pcNext := result
   switch(controlUnit.io.resultSrc) {
     is(ResultSrc.aluOutBuf) {
       result := aluOutBuf
@@ -151,6 +157,10 @@ class Perilus(
   io.registerFile.io.a3 := instr(11, 7)
   io.registerFile.io.writeData3 := result
   io.registerFile.io.writeEnable3 := controlUnit.io.regWrite
+
+  printf("----\n")
+  printf(cf"pcNext = $pcNext\n")
+  printf(cf"pc = $pc\n")
 }
 
 object Perilus extends App {
