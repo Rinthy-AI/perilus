@@ -8,6 +8,7 @@ pkgs.mkShellNoCC {
     act
     coursier
     jdk21
+    just
     metals
     sbt
     verilator

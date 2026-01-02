@@ -16,11 +16,13 @@ multi-cycle processor from [Harris and Harris].
     - [Scala 2] (**not 3** because Chisel isn't compatible with it)
     - [`sbt`][sbt]
     - [Verilator]
-1. `sbt test`
+    - [`just`][just]
+1. `just test`
 
 [Scala 2]: https://www.scala-lang.org/download/all.html
 [sbt]: https://www.scala-sbt.org/
 [Verilator]: https://verilator.org/guide/latest/overview.html
+[just]: https://github.com/casey/just
 
 [^nix]: If you use the `nix` package manager, you can use the `shell.nix` file in the project root
     with `nix-shell`.

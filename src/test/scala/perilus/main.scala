@@ -51,5 +51,42 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
         }
       }
     }
+    it("executes sw") {
+      simulate(
+        new Perilus(
+          initRegs = System.getProperty("user.dir") + "/assets/reg-sw-x32.hex",
+          initMem = System.getProperty("user.dir") + "/assets/mem-sw-64x32.hex",
+          withDebug = true
+        )
+      ) { perilus =>
+        {
+          val perilusDebug = perilus.io.debug.get
+
+          // sw x6, -4(x9)
+          // sw rs2, imm(rs1)
+          val rs2 = 6
+          val rs1 = 9
+          val base = 0x3a
+          val imm = -4
+          val memAddr = (base + imm).U
+          val memData = 0x01830169
+
+          // rs1 contains the base pointer
+          perilusDebug.reg.poke(rs1)
+          perilusDebug.regData.expect(base)
+
+          // rs2 contains data to be stored
+          perilusDebug.reg.poke(rs2)
+          perilusDebug.regData.expect(memData)
+
+          // execute the instruction
+          perilus.clock.step(5)
+
+          // contents of memAddr have not changed
+          perilusDebug.memAddr.poke(memAddr)
+          perilusDebug.memData.expect(memData)
+        }
+      }
+    }
   }
 }
