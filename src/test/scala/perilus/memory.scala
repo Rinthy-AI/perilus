@@ -1,13 +1,18 @@
+package com.rinthyAi.perilus.test.memory
+
 import chisel3._
 import chisel3.simulator.scalatest.ChiselSim
 import org.scalatest.funspec.AnyFunSpec
+import scala.collection.mutable.ArrayBuffer
 
 import com.rinthyAi.perilus.memory._
+import com.rinthyAi.perilus.test.utils.TestUtils.initMemFile
 
 class MemoryTests extends AnyFunSpec with ChiselSim {
   describe("Memory") {
     it("stores and retrieves data") {
-      simulate(new Memory(8, 32.W, System.getProperty("user.dir") + "/assets/mem-zeros-8x32.hex")) {
+      val numWords = 8
+      simulate(new Memory(numWords, 32.W, initMemFile(ArrayBuffer.fill(numWords)(0x00000000)))) {
         memory =>
           {
             val addr1 = "h4".U

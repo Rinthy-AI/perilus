@@ -1,3 +1,5 @@
+package com.rinthyAi.perilus.test.registerFile
+
 import chisel3._
 import chisel3.simulator.scalatest.ChiselSim
 import org.scalatest.funspec.AnyFunSpec

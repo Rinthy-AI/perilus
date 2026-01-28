@@ -1,30 +1,38 @@
+package com.rinthyAi.perilus.test.main
+
 import chisel3._
 import chisel3.simulator.scalatest.ChiselSim
 import org.scalatest.funspec.AnyFunSpec
 import scala.collection.mutable.ArrayBuffer
 
 import com.rinthyAi.perilus.main._
+import com.rinthyAi.perilus.test.utils.TestUtils.initMemFile
 
 class PerilusTests extends AnyFunSpec with ChiselSim {
   describe("Perilus") {
     it("executes lw") {
+      val rd = 21
+      val rs1 = 11
+      val base = 0x30
+      val imm = 0xa8
+      val memAddr = base + imm
+      val memData = 0x0f3f9400
+
+      var registerFile = ArrayBuffer.fill(32)(0x00000000)
+      registerFile(rs1) = 0x00000030
+      var memory = ArrayBuffer.fill(64)(0x00000000)
+      memory(0) = 0x0a85aa83 // lw x21, 0xa8(x11)
+      memory(memAddr / 4) = memData
+
       simulate(
         new Perilus(
-          initRegs = System.getProperty("user.dir") + "/assets/reg-lw-x32.hex",
-          initMem = System.getProperty("user.dir") + "/assets/mem-lw-64x32.hex",
+          initRegs = initMemFile(registerFile),
+          initMem = initMemFile(memory),
           withDebug = true
         )
       ) { perilus =>
         {
           val perilusDebug = perilus.io.debug.get
-
-          // lw x21, 0xa8(x11)
-          val rd = 21
-          val rs1 = 11
-          val base = 0x30
-          val imm = 0xa8
-          val memAddr = (base + imm).U
-          val memData = 0x0f3f9400
 
           // rs1 contains the base pointer
           perilusDebug.reg.poke(rs1)
@@ -52,24 +60,28 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
     }
     it("executes sw") {
+      val rs1 = 9
+      val rs2 = 6
+      val base = 0x38
+      val imm = -4
+      val memAddr = base + imm
+      val memData = 0x01830169
+
+      var registerFile = ArrayBuffer.fill(32)(0x00000000)
+      registerFile(rs1) = base
+      registerFile(rs2) = memData
+      var memory = ArrayBuffer.fill(64)(0x00000000)
+      memory(0) = 0xfe64ae23 // sw x6, -4(x9)
+
       simulate(
         new Perilus(
-          initRegs = System.getProperty("user.dir") + "/assets/reg-sw-x32.hex",
-          initMem = System.getProperty("user.dir") + "/assets/mem-sw-64x32.hex",
+          initRegs = initMemFile(registerFile),
+          initMem = initMemFile(memory),
           withDebug = true
         )
       ) { perilus =>
         {
           val perilusDebug = perilus.io.debug.get
-
-          // sw x6, -4(x9)
-          // sw rs2, imm(rs1)
-          val rs2 = 6
-          val rs1 = 9
-          val base = 0x38
-          val imm = -4
-          val memAddr = (base + imm).U
-          val memData = 0x01830169
 
           // rs1 contains the base pointer
           perilusDebug.reg.poke(rs1)
@@ -93,20 +105,28 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
     }
     it("executes beq") {
+      val rs1 = 3
+      val rs2 = 6
+      val rs3 = 9
+      val offset = 16.U
+
+      var registerFile = ArrayBuffer.fill(32)(0x00000000)
+      registerFile(rs1) = 0xabcdef01
+      registerFile(rs2) = 0xabcde012
+      registerFile(rs3) = 0xabcde012
+      var memory = ArrayBuffer.fill(64)(0x00000000)
+      memory(0) = 0x02618563 // beq x3, x6, 0x4
+      memory(1) = 0x00930863 // beq x6, x9, 0x4
+
       simulate(
         new Perilus(
-          initRegs = System.getProperty("user.dir") + "/assets/reg-beq-x32.hex",
-          initMem = System.getProperty("user.dir") + "/assets/mem-beq-64x32.hex",
+          initRegs = initMemFile(registerFile),
+          initMem = initMemFile(memory),
           withDebug = true
         )
       ) { perilus =>
         {
           val perilusDebug = perilus.io.debug.get
-
-          val rs1 = 3
-          val rs2 = 6
-          val rs3 = 9
-          val offset = 16.U
 
           // Verify that registers are/aren't equal as expected
           perilusDebug.reg.poke(rs1)
