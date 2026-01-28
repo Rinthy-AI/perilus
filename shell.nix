@@ -7,6 +7,7 @@ pkgs.mkShellNoCC {
   packages = with pkgs; [
     act
     coursier
+    gtkwave
     jdk21
     just
     metals
