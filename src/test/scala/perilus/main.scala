@@ -7,87 +7,91 @@ import com.rinthyAi.perilus.main._
 
 class PerilusTests extends AnyFunSpec with ChiselSim {
   describe("Perilus") {
-    //   it("executes lw") {
-    //     simulate(
-    //       new Perilus(
-    //         initRegs = System.getProperty("user.dir") + "/assets/reg-lw-x32.hex",
-    //         initMem = System.getProperty("user.dir") + "/assets/mem-lw-64x32.hex",
-    //         withDebug = true
-    //       )
-    //     ) { perilus =>
-    //       {
-    //         val perilusDebug = perilus.io.debug.get
+       it("executes lw") {
+         simulate(
+           new Perilus(
+             initRegs = System.getProperty("user.dir") + "/assets/reg-lw-x32.hex",
+             initMem = System.getProperty("user.dir") + "/assets/mem-lw-64x32.hex",
+             withDebug = true
+           )
+         ) { perilus =>
+           {
+             val perilusDebug = perilus.io.debug.get
 
-    //         // lw x21, 0x2a(x11)
-    //         val rd = 21
-    //         val rs1 = 11
-    //         val base = 0xc
-    //         val imm = 0x2a
-    //         val memAddr = (base + imm).U
-    //         val memData = 0x0f3f9400
+             // lw x21, 0xa8(x11)
+             val rd = 21
+             val rs1 = 11
+             val base = 0x30
+             val imm = 0xa8
+             val memAddr = (base + imm).U
+             val memData = 0x0f3f9400
 
-    //         // rs1 contains the base pointer
-    //         perilusDebug.reg.poke(rs1)
-    //         perilusDebug.regData.expect(base)
+             // rs1 contains the base pointer
+             perilusDebug.reg.poke(rs1)
+             perilusDebug.regData.expect(base)
 
-    //         // rd is empty
-    //         perilusDebug.reg.poke(rd)
-    //         perilusDebug.regData.expect(0.U)
+             // rd is empty
+             perilusDebug.reg.poke(rd)
+             perilusDebug.regData.expect(0.U)
 
-    //         // memAddr contains memData
-    //         perilusDebug.memAddr.poke(memAddr)
-    //         perilusDebug.memData.expect(memData)
+             // memAddr contains memData
+             perilusDebug.memAddr.poke(memAddr)
+             perilusDebug.memData.expect(memData)
 
-    //         // execute the instruction
-    //         perilus.clock.step(6)
+             // execute the instruction
+             perilus.clock.step(5)
 
-    //         // rd contains memData
-    //         perilusDebug.reg.poke(rd)
-    //         perilusDebug.regData.expect(memData)
+             // rd contains memData
+             perilusDebug.reg.poke(rd)
+             perilusDebug.regData.expect(memData)
 
-    //         // contents of memAddr have not changed
-    //         perilusDebug.memAddr.poke(memAddr)
-    //         perilusDebug.memData.expect(memData)
-    //       }
-    //     }
-    //   }
-    //   it("executes sw") {
-    //     simulate(
-    //       new Perilus(
-    //         initRegs = System.getProperty("user.dir") + "/assets/reg-sw-x32.hex",
-    //         initMem = System.getProperty("user.dir") + "/assets/mem-sw-64x32.hex",
-    //         withDebug = true
-    //       )
-    //     ) { perilus =>
-    //       {
-    //         val perilusDebug = perilus.io.debug.get
+             // contents of memAddr have not changed
+             perilusDebug.memAddr.poke(memAddr)
+             perilusDebug.memData.expect(memData)
+           }
+         }
+       }
+       it("executes sw") {
+         simulate(
+           new Perilus(
+             initRegs = System.getProperty("user.dir") + "/assets/reg-sw-x32.hex",
+             initMem = System.getProperty("user.dir") + "/assets/mem-sw-64x32.hex",
+             withDebug = true
+           )
+         ) { perilus =>
+           {
+             val perilusDebug = perilus.io.debug.get
 
-    //         // sw x6, -4(x9)
-    //         // sw rs2, imm(rs1)
-    //         val rs2 = 6
-    //         val rs1 = 9
-    //         val base = 0x3a
-    //         val imm = -4
-    //         val memAddr = (base + imm).U
-    //         val memData = 0x01830169
+             // sw x6, -4(x9)
+             // sw rs2, imm(rs1)
+             val rs2 = 6
+             val rs1 = 9
+             val base = 0x38
+             val imm = -4
+             val memAddr = (base + imm).U
+             val memData = 0x01830169
 
-    //         // rs1 contains the base pointer
-    //         perilusDebug.reg.poke(rs1)
-    //         perilusDebug.regData.expect(base)
+             // rs1 contains the base pointer
+             perilusDebug.reg.poke(rs1)
+             perilusDebug.regData.expect(base)
 
-    //         // rs2 contains data to be stored
-    //         perilusDebug.reg.poke(rs2)
-    //         perilusDebug.regData.expect(memData)
+             // rs2 contains data to be stored
+             perilusDebug.reg.poke(rs2)
+             perilusDebug.regData.expect(memData)
 
-    //         // execute the instruction
-    //         perilus.clock.step(5)
+             // memAddr doesn't have memData yet
+             perilusDebug.memAddr.poke(memAddr)
+             assert(perilusDebug.memData.peek().litValue != memData)
 
-    //         // contents of memAddr have not changed
-    //         perilusDebug.memAddr.poke(memAddr)
-    //         perilusDebug.memData.expect(memData)
-    //       }
-    //     }
-    //   }
+             // execute the instruction
+             perilus.clock.step(4)
+
+             // contents of memAddr have not changed
+             perilusDebug.memAddr.poke(memAddr)
+             perilusDebug.memData.expect(memData)
+           }
+         }
+       }
     it("executes beq") {
       simulate(
         new Perilus(
@@ -117,20 +121,20 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           var pc_t = perilus.io.pc.peek()
           // execute the first beq instruction:fe64ae23
           //   beq x3, x6, 0x4
-          perilus.clock.step(4)
+          perilus.clock.step(3)
 
           // pc should be at address 1 because x3 != x6
           val expected_1 = pc_t.litValue + 4
-          // perilus.io.pc.expect(expected_1.U)
+          perilus.io.pc.expect(expected_1.U)
           pc_t = perilus.io.pc.peek()
 
           // execute the second beq instruction:
           //   beq x6, x9, 0x4
-          perilus.clock.step(4)
+          perilus.clock.step(3)
 
           // pc should be at address 5 because x6 == x9
           val expected_2 = pc_t.litValue + offset.litValue
-          // perilus.io.pc.expect(expected_2.U)
+          perilus.io.pc.expect(expected_2.U)
         }
       }
     }
