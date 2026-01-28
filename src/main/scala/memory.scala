@@ -23,24 +23,20 @@ class Memory(
       else None
   })
 
+  private val AddressShift = log2Ceil(width.get / 8)
+
   val memory = Mem(numWords, UInt(width))
   if (initMem.nonEmpty) {
     loadMemoryFromFile(memory, initMem)
   }
 
-  // this fixes warnings related to width being too high or low to index memory
-  // see https://www.chisel-lang.org/docs/cookbooks/cookbook#how-do-i-resolve-dynamic-index--is-too-widenarrow-for-extractee-
-  val correctWidth = log2Ceil(numWords)
-  val correctWidthAddress = io.address.pad(correctWidth)(correctWidth - 1, 0)
-
   io.debug.foreach(d => {
-    val correctWidthDebugAddress = d.memAddr.pad(correctWidth)(correctWidth - 1, 0)
-    d.memData := memory.read(correctWidthDebugAddress)
+    d.memData := memory.read(d.memAddr >> AddressShift)
   })
 
   when(io.writeEnable) {
-    memory.write(correctWidthAddress, io.writeData)
+    memory.write(io.address >> AddressShift, io.writeData)
   }
 
-  io.readData := memory.read(correctWidthAddress)
+  io.readData := memory.read(io.address >> AddressShift)
 }

@@ -10,8 +10,8 @@ class MemoryTests extends AnyFunSpec with ChiselSim {
       simulate(new Memory(8, 32.W, System.getProperty("user.dir") + "/assets/mem-zeros-8x32.hex")) {
         memory =>
           {
-            val addr1 = "h12e".U
-            val addr2 = "h0d7".U
+            val addr1 = "h4".U
+            val addr2 = "h18".U
             val data1 = "he7d857de".U
             val data2 = "h38cc122f".U
 
