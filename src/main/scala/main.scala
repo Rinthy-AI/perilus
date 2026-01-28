@@ -93,8 +93,6 @@ class Perilus(
   val aluOutBuf = RegInit(0.U(width))
   aluOutBuf := alu.io.aluResult
 
-  printf(cf"aluOutBuf = $aluOutBuf\n")
-
   val result = WireDefault(0.U(width))
   pcNext := result
   switch(controlUnit.io.resultSrc) {
@@ -157,10 +155,6 @@ class Perilus(
   io.registerFile.io.a3 := instr(11, 7)
   io.registerFile.io.writeData3 := result
   io.registerFile.io.writeEnable3 := controlUnit.io.regWrite
-
-  printf("----\n")
-  printf(cf"pcNext = $pcNext\n")
-  printf(cf"pc = $pc\n")
 }
 
 object Perilus extends App {

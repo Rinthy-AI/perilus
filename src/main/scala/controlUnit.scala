@@ -46,7 +46,6 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
   io.resultSrc := ResultSrc.aluOutBuf
 
   // Main FSM (Figure 7.45, page 436)
-  printf(cf"state = $state\n")
   switch(state) {
     is(ControlUnitState.fetch) {
       io.adrSrc := false.B

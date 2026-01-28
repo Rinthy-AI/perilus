@@ -15,7 +15,6 @@ class Alu extends Module {
 
   switch(io.aluControl) {
     is(AluControl.add) {
-      printf(cf"srcA = ${io.srcA}, srcB = ${io.srcB}\n")
       io.aluResult := io.srcA + io.srcB
     }
     is(AluControl.sub) {
