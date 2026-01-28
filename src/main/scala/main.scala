@@ -161,6 +161,7 @@ object Perilus extends App {
   println(
     ChiselStage.emitSystemVerilogFile(
       new Perilus,
+      args = Array("--target-dir", "generated"),
       firtoolOpts = Array(
         "-disable-all-randomization",
         "-strip-debug-info",
