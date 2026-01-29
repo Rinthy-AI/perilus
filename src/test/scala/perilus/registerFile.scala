@@ -3,14 +3,16 @@ package com.rinthyAi.perilus.test.registerFile
 import chisel3._
 import chisel3.simulator.scalatest.ChiselSim
 import org.scalatest.funspec.AnyFunSpec
+import scala.collection.mutable.ArrayBuffer
 
 import com.rinthyAi.perilus.registerFile._
+import com.rinthyAi.perilus.test.utils.TestUtils.initMemFile
 
 class RegisterFileTests extends AnyFunSpec with ChiselSim {
   describe("RegisterFile") {
     it("stores and retrieves data") {
       simulate(
-        new RegisterFile(32.W, System.getProperty("user.dir") + "/assets/reg-zeros-x32.hex")
+        new RegisterFile(32.W, initMemFile(ArrayBuffer.fill(32)(0x00000000)))
       ) { registerFile =>
         {
           val reg1 = 5.U
@@ -49,7 +51,7 @@ class RegisterFileTests extends AnyFunSpec with ChiselSim {
     }
     it("doesn't write to x0") {
       simulate(
-        new RegisterFile(32.W, System.getProperty("user.dir") + "/assets/reg-zeros-x32.hex")
+        new RegisterFile(32.W, initMemFile(ArrayBuffer.fill(32)(0x00000000)))
       ) { registerFile =>
         {
           registerFile.io.a3.poke(0.U)
