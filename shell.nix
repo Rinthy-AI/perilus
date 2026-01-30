@@ -10,6 +10,7 @@ pkgs.mkShellNoCC {
     gtkwave
     jdk21
     just
+    llvm
     metals
     sbt
     verilator
