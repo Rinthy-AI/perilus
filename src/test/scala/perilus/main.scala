@@ -344,6 +344,44 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
     it("executes jal") {
       cancel("Not yet implemented")
     }
+    describe("runs small test programs") {
+      it("20th Fibonacci number") {
+        var registerFile = ArrayBuffer.fill(32)(0x00000000)
+        registerFile(10) = 20
+        var memory = ArrayBuffer.fill(64)(0x00000000)
+        // compute the nth Fibonacci number, for 2 <= n <= 47
+        // a0 => n (argument), output (return)
+        // t0 => counter (n -> 0)
+        // t1 => a
+        // t2 => b
+        memory(0) = 0x000502b3 // add t0, a0, zero     # counter = n
+        memory(1) = 0xffe28293 // addi t0, t0, -2      # counter -= 2
+        memory(2) = 0x00100313 // addi t1, zero, 1     # a = 1
+        memory(3) = 0x000003b3 // add t2, zero, zero   # b = 0
+        memory(4) = 0x00028c63 // beq t0, zero, 24     # break if counter == 0
+        memory(5) = 0x00730533 // add a0, t1, t2       # output = a + b
+        memory(6) = 0x000303b3 // add t2, t1, zero     # b = a
+        memory(7) = 0x00050333 // add t1, a0, zero     # a = output
+        memory(8) = 0xfff28293 // addi t0, t0, -1      # counter -= 1
+        memory(9) = 0xfe0006e3 // beq zero, zero, -20  # loop
+        memory(10) = 0x000002b3 // add t0, zero, zero   # done
+
+        simulate(
+          new Perilus(
+            initRegs = initMemFile(registerFile),
+            initMem = initMemFile(memory),
+            withDebug = true
+          )
+        ) { perilus =>
+          {
+            val perilusDebug = perilus.io.debug.get
+            while (perilus.io.pc.peek().litValue != 44) { perilus.clock.step() }
+            perilusDebug.reg.poke(10)
+            perilusDebug.regData.expect(4181)
+          }
+        }
+      }
+    }
   }
   def testIType(
       funct3: Int,
