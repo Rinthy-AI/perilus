@@ -342,7 +342,30 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
     }
     it("executes jal") {
-      cancel("Not yet implemented")
+      var registerFile = ArrayBuffer.fill(32)(0x00000000)
+      var memory = ArrayBuffer.fill(64)(0x00000000)
+      memory(0) = 0x01e003ef // jal x7, 0x1e
+      simulate(
+        new Perilus(
+          initRegs = initMemFile(registerFile),
+          initMem = initMemFile(memory),
+          withDebug = true
+        )
+      ) { perilus =>
+        {
+          val perilusDebug = perilus.io.debug.get
+
+          perilus.io.pc.expect(0)
+          perilusDebug.reg.poke(7)
+          perilusDebug.regData.expect(0)
+
+          perilus.clock.step(4)
+
+          perilus.io.pc.expect(0x1e)
+          perilusDebug.reg.poke(7)
+          perilusDebug.regData.expect(4)
+        }
+      }
     }
     describe("runs small test programs") {
       it("20th Fibonacci number") {
