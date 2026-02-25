@@ -8,6 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import com.rinthyAi.perilus.main._
 import com.rinthyAi.perilus.test.utils.TestUtils.initMemFile
+import com.rinthyAi.perilus.controlUnit.ControlUnitState
 
 class PerilusTests extends AnyFunSpec with ChiselSim {
   describe("Perilus") {
@@ -384,6 +385,44 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
       it("bgeu") {
         cancel("Not yet implemented")
+      }
+    }
+    describe("skips environment instructions") {
+      def testNop(instruction: Int): Unit = {
+        var registerFile = ArrayBuffer.fill(32)(0x00000000)
+        var memory = ArrayBuffer.fill(64)(0x00000000)
+        memory(0) = instruction
+        simulate(
+          new Perilus(
+            initRegs = initMemFile(registerFile),
+            initMem = initMemFile(memory),
+            withDebug = true
+          )
+        ) { perilus =>
+          {
+            val perilusDebug = perilus.io.debug.get
+            perilus.io.pc.expect(0.U)
+            perilusDebug.state.expect(ControlUnitState.fetch)
+            perilus.clock.step(2)
+            perilus.io.pc.expect(4.U)
+            perilusDebug.state.expect(ControlUnitState.fetch)
+          }
+        }
+      }
+      it("ecall") {
+        testNop(0x00000073)
+      }
+      it("ebreak") {
+        testNop(0x00100073)
+      }
+      it("fence") {
+        testNop(0x0000000f)
+      }
+      it("fence.tso") {
+        testNop(0x8330000f)
+      }
+      it("pause") {
+        testNop(0x0100000f)
       }
     }
     it("executes jal") {

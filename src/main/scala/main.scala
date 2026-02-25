@@ -39,9 +39,14 @@ class Perilus(
         val regData = Output(UInt(width))
         val memAddr = Input(UInt(width))
         val memData = Output(UInt(width))
+        val state = Output(ControlUnitState())
       })
       else None
   })
+
+  val alu = Module(new Alu())
+  val controlUnit = Module(new ControlUnit(withDebug))
+  val extendUnit = Module(new ExtendUnit())
 
   io.registerFile.io.debug.foreach(r => {
     r.reg := 0.U
@@ -58,11 +63,10 @@ class Perilus(
       m.memAddr := d.memAddr
       d.memData := m.memData
     })
+    controlUnit.io.debug.foreach(c => {
+      d.state := c.state
+    })
   })
-
-  val alu = Module(new Alu())
-  val controlUnit = Module(new ControlUnit())
-  val extendUnit = Module(new ExtendUnit())
 
   val pc = RegInit(0.U(width))
   val pcNext = WireDefault(UInt(width), 0.U)

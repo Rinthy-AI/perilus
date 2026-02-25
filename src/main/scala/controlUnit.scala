@@ -71,6 +71,8 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
         state := ControlUnitState.jal
       }.elsewhen(io.op === Opcode.branch) {
         state := ControlUnitState.branch
+      }.elsewhen(io.op === Opcode.env || io.op === Opcode.fence) {
+        state := ControlUnitState.fetch
       }
     }
     is(ControlUnitState.memAdr) {
@@ -231,6 +233,7 @@ object ControlUnitState extends ChiselEnum {
 
 object Opcode extends ChiselEnum {
   val load = Value("b0000011".U)
+  val fence = Value("b0001111".U)
   val immediate = Value("b0010011".U)
   val auipc = Value("b0010111".U)
   val store = Value("b0100011".U)
