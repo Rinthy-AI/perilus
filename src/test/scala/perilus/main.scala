@@ -219,7 +219,16 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
         )
       }
       it("sll") {
-        cancel("Not yet implemented")
+        testRType(
+          funct3 = 1,
+          funct7_5 = false,
+          rd = 21,
+          rs1 = 24,
+          rs2 = 25,
+          rs1Value = 0xd021eb67,
+          rs2Value = 17,
+          operation = (rs1, rs2) => rs1 << rs2
+        )
       }
       it("slt") {
         testRType(
@@ -230,20 +239,56 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs2 = 11,
           rs1Value = 0xe680ac63,
           rs2Value = 0x33afcd8f,
-          operation = (rs1, rs2) => if (toULong(rs1) < toULong(rs2)) 1 else 0
+          operation = (rs1, rs2) => if (rs1 < rs2) 1 else 0
         )
       }
       it("sltu") {
-        cancel("Not yet implemented")
+        testRType(
+          funct3 = 3,
+          funct7_5 = false,
+          rd = 13,
+          rs1 = 25,
+          rs2 = 31,
+          rs1Value = 0x2ea46594,
+          rs2Value = 0xb4258409,
+          operation = (rs1, rs2) => if (toULong(rs1) < toULong(rs2)) 1 else 0
+        )
       }
       it("xor") {
-        cancel("Not yet implemented")
+        testRType(
+          funct3 = 4,
+          funct7_5 = false,
+          rd = 12,
+          rs1 = 10,
+          rs2 = 18,
+          rs1Value = 0xc52f9cac,
+          rs2Value = 0xd2a4c0dc,
+          operation = (rs1, rs2) => rs1 ^ rs2
+        )
       }
       it("srl") {
-        cancel("Not yet implemented")
+        testRType(
+          funct3 = 5,
+          funct7_5 = false,
+          rd = 26,
+          rs1 = 2,
+          rs2 = 25,
+          rs1Value = 0x3fa60574,
+          rs2Value = 29,
+          operation = (rs1, rs2) => rs1 >>> rs2
+        )
       }
       it("sra") {
-        cancel("Not yet implemented")
+        testRType(
+          funct3 = 5,
+          funct7_5 = true,
+          rd = 30,
+          rs1 = 19,
+          rs2 = 5,
+          rs1Value = 0xee91cf2d,
+          rs2Value = 10,
+          operation = (rs1, rs2) => rs1 >> rs2
+        )
       }
       it("or") {
         testRType(

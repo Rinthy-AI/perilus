@@ -70,7 +70,7 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
       }.elsewhen(io.op === Opcode.jal) {
         state := ControlUnitState.jal
       }.elsewhen(io.op === Opcode.branch) {
-        state := ControlUnitState.beq
+        state := ControlUnitState.branch
       }
     }
     is(ControlUnitState.memAdr) {
@@ -127,7 +127,7 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
       pcUpdate := true.B
       state := ControlUnitState.aluWb
     }
-    is(ControlUnitState.beq) {
+    is(ControlUnitState.branch) {
       io.aluSrcA := AluSrcA.rd1
       io.aluSrcB := AluSrcB.rd2
       io.resultSrc := ResultSrc.aluOutBuf
@@ -170,15 +170,23 @@ class AluDecoder extends Module {
     }
     is(AluOp.arithmetic) {
       when(
-        io.funct3 === "b000".U && ((!io.op.asUInt(5) && !io.funct7_5) || (!io.op.asUInt(
-          5
-        ) && io.funct7_5) || (io.op.asUInt(5) && !io.funct7_5))
+        io.funct3 === "b000".U && (!io.op.asUInt(5) || (io.op.asUInt(5) && !io.funct7_5))
       ) {
         io.aluControl := AluControl.add
       }.elsewhen(io.funct3 === "b000".U && io.op.asUInt(5) && io.funct7_5) {
         io.aluControl := AluControl.sub
+      }.elsewhen(io.funct3 === "b001".U) {
+        io.aluControl := AluControl.sll
       }.elsewhen(io.funct3 === "b010".U) {
         io.aluControl := AluControl.slt
+      }.elsewhen(io.funct3 === "b011".U) {
+        io.aluControl := AluControl.sltu
+      }.elsewhen(io.funct3 === "b100".U) {
+        io.aluControl := AluControl.xor
+      }.elsewhen(io.funct3 === "b101".U && !io.funct7_5) {
+        io.aluControl := AluControl.srl
+      }.elsewhen(io.funct3 === "b101".U && io.funct7_5) {
+        io.aluControl := AluControl.sra
       }.elsewhen(io.funct3 === "b110".U) {
         io.aluControl := AluControl.or
       }.elsewhen(io.funct3 === "b111".U) {
@@ -217,7 +225,8 @@ class InstructionDecoder extends Module {
 }
 
 object ControlUnitState extends ChiselEnum {
-  val fetch, decode, memAdr, memRead, memWb, memWrite, executeR, aluWb, executeI, jal, beq = Value
+  val fetch, decode, memAdr, memRead, memWb, memWrite, executeR, aluWb, executeI, jal, branch =
+    Value
 }
 
 object Opcode extends ChiselEnum {

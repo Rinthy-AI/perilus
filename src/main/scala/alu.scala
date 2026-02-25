@@ -20,14 +20,29 @@ class Alu extends Module {
     is(AluControl.sub) {
       io.aluResult := io.srcA - io.srcB
     }
-    is(AluControl.and) {
-      io.aluResult := io.srcA & io.srcB
+    is(AluControl.sll) {
+      io.aluResult := io.srcA << io.srcB(5, 0)
+    }
+    is(AluControl.slt) {
+      io.aluResult := (io.srcA.asSInt < io.srcB.asSInt).asUInt
+    }
+    is(AluControl.sltu) {
+      io.aluResult := io.srcA < io.srcB
+    }
+    is(AluControl.xor) {
+      io.aluResult := io.srcA ^ io.srcB
+    }
+    is(AluControl.srl) {
+      io.aluResult := io.srcA >> io.srcB(5, 0)
+    }
+    is(AluControl.sra) {
+      io.aluResult := (io.srcA.asSInt >> io.srcB(5, 0)).asUInt
     }
     is(AluControl.or) {
       io.aluResult := io.srcA | io.srcB
     }
-    is(AluControl.slt) {
-      io.aluResult := io.srcA < io.srcB
+    is(AluControl.and) {
+      io.aluResult := io.srcA & io.srcB
     }
   }
 
@@ -35,33 +50,21 @@ class Alu extends Module {
 }
 
 object AluControl extends ChiselEnum {
-  val add = Value("b000".U)
-  val sub = Value("b001".U)
-  val and = Value("b010".U)
-  val or = Value("b011".U)
-  val slt = Value("b101".U)
+  val add, sub, sll, slt, sltu, xor, srl, sra, or, and = Value
 }
 
 object AluSrcA extends ChiselEnum {
-  val pc = Value("b00".U)
-  val oldPc = Value("b01".U)
-  val rd1 = Value("b10".U)
+  val pc, oldPc, rd1 = Value
 }
 
 object AluSrcB extends ChiselEnum {
-  val rd2 = Value("b00".U)
-  val immExt = Value("b01".U)
-  val four = Value("b10".U)
+  val rd2, immExt, four = Value
 }
 
 object AluOp extends ChiselEnum {
-  val memory = Value("b00".U)
-  val branch = Value("b01".U)
-  val arithmetic = Value("b10".U)
+  val memory, branch, arithmetic = Value
 }
 
 object ResultSrc extends ChiselEnum {
-  val aluOutBuf = Value("b00".U)
-  val readDataBuf = Value("b01".U)
-  val aluResult = Value("b10".U)
+  val aluOutBuf, readDataBuf, aluResult = Value
 }

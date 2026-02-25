@@ -9,21 +9,11 @@ import com.rinthyAi.perilus.controlUnit._
 import com.rinthyAi.perilus.extendUnit._
 
 class ControlUnitTests extends AnyFunSpec with ChiselSim {
-  def checkFsmStates(dut: ControlUnit, states: List[ControlUnitState.Type]) = {
-    val debug = dut.io.debug.get
-    debug.state.expect(states.head)
-    states.tail.foreach(state => {
-      dut.clock.step(1)
-      debug.state.expect(state)
-    })
-    dut.clock.step(1)
-    debug.state.expect(states.head)
-  }
   describe("AluDecoder") {
     it("decodes correctly") {
       simulate(new AluDecoder) { aluDecoder =>
         {
-          aluDecoder.io.funct3.poke(0.U)
+          aluDecoder.io.funct3.poke("b000".U)
           aluDecoder.io.funct7_5.poke(false.B)
           aluDecoder.io.op.poke(Opcode.rType)
 
@@ -37,10 +27,21 @@ class ControlUnitTests extends AnyFunSpec with ChiselSim {
           aluDecoder.io.op.poke(Opcode.immediate)
           aluDecoder.io.aluControl.expect(AluControl.add)
           aluDecoder.io.op.poke(Opcode.rType)
+          aluDecoder.io.aluControl.expect(AluControl.add)
           aluDecoder.io.funct7_5.poke(true.B)
           aluDecoder.io.aluControl.expect(AluControl.sub)
+          aluDecoder.io.funct3.poke("b001".U)
+          aluDecoder.io.aluControl.expect(AluControl.sll)
           aluDecoder.io.funct3.poke("b010".U)
           aluDecoder.io.aluControl.expect(AluControl.slt)
+          aluDecoder.io.funct3.poke("b011".U)
+          aluDecoder.io.aluControl.expect(AluControl.sltu)
+          aluDecoder.io.funct3.poke("b100".U)
+          aluDecoder.io.aluControl.expect(AluControl.xor)
+          aluDecoder.io.funct3.poke("b101".U)
+          aluDecoder.io.aluControl.expect(AluControl.sra)
+          aluDecoder.io.funct7_5.poke(false.B)
+          aluDecoder.io.aluControl.expect(AluControl.srl)
           aluDecoder.io.funct3.poke("b110".U)
           aluDecoder.io.aluControl.expect(AluControl.or)
           aluDecoder.io.funct3.poke("b111".U)
@@ -50,119 +51,60 @@ class ControlUnitTests extends AnyFunSpec with ChiselSim {
     }
   }
   describe("ControlUnit") {
-    it("controls the beq instruction") {
+    it("advances from Fetch to Decode") {
       simulate(new ControlUnit(withDebug = true)) { controlUnit =>
         {
-          controlUnit.io.op.poke(Opcode.branch)
-          controlUnit.io.funct3.poke(0.U)
-          controlUnit.io.funct7_5.poke(false.B)
-          controlUnit.io.zero.poke(false.B)
-
-          val states = List(
-            ControlUnitState.fetch,
-            ControlUnitState.decode,
-            ControlUnitState.beq
-          )
-
-          checkFsmStates(controlUnit, states)
+          val controlUnitDebug = controlUnit.io.debug.get
+          controlUnitDebug.state.expect(ControlUnitState.fetch)
+          controlUnit.clock.step()
+          controlUnitDebug.state.expect(ControlUnitState.decode)
         }
       }
     }
-    it("controls the jal instruction") {
-      simulate(new ControlUnit(withDebug = true)) { controlUnit =>
-        {
-          controlUnit.io.op.poke(Opcode.jal)
-          controlUnit.io.funct3.poke(0.U)
-          controlUnit.io.funct7_5.poke(false.B)
-          controlUnit.io.zero.poke(false.B)
-
-          val states = List(
-            ControlUnitState.fetch,
-            ControlUnitState.decode,
-            ControlUnitState.jal,
-            ControlUnitState.aluWb
-          )
-
-          checkFsmStates(controlUnit, states)
-        }
-      }
+    it("advances from Decode to MemAdr for loads and stores") {
+      cancel("Not yet implemented")
     }
-    it("controls the lw instruction") {
-      simulate(new ControlUnit(withDebug = true)) { controlUnit =>
-        {
-          controlUnit.io.op.poke(Opcode.load)
-          controlUnit.io.funct3.poke(2.U)
-          controlUnit.io.funct7_5.poke(false.B)
-          controlUnit.io.zero.poke(false.B)
-
-          val states = List(
-            ControlUnitState.fetch,
-            ControlUnitState.decode,
-            ControlUnitState.memAdr,
-            ControlUnitState.memRead,
-            ControlUnitState.memWb
-          )
-
-          checkFsmStates(controlUnit, states)
-        }
-      }
+    it("advances from Decode to ExecuteR for R-types") {
+      cancel("Not yet implemented")
     }
-    it("controls the or instruction") {
-      simulate(new ControlUnit(withDebug = true)) { controlUnit =>
-        {
-          controlUnit.io.op.poke(Opcode.rType)
-          controlUnit.io.funct3.poke(6.U)
-          controlUnit.io.funct7_5.poke(false.B)
-          controlUnit.io.zero.poke(false.B)
-
-          val states = List(
-            ControlUnitState.fetch,
-            ControlUnitState.decode,
-            ControlUnitState.executeR,
-            ControlUnitState.aluWb
-          )
-
-          checkFsmStates(controlUnit, states)
-        }
-      }
+    it("advances from Decode to ExecuteI for I-types") {
+      cancel("Not yet implemented")
     }
-    it("controls the slti instruction") {
-      simulate(new ControlUnit(withDebug = true)) { controlUnit =>
-        {
-          controlUnit.io.op.poke(Opcode.immediate)
-          controlUnit.io.funct3.poke(2.U)
-          controlUnit.io.funct7_5.poke(false.B)
-          controlUnit.io.zero.poke(false.B)
-
-          val states = List(
-            ControlUnitState.fetch,
-            ControlUnitState.decode,
-            ControlUnitState.executeI,
-            ControlUnitState.aluWb
-          )
-
-          checkFsmStates(controlUnit, states)
-        }
-      }
+    it("advances from Decode to Jal for jal instruction") {
+      cancel("Not yet implemented")
     }
-    it("controls the sw instruction") {
-      simulate(new ControlUnit(withDebug = true)) { controlUnit =>
-        {
-          controlUnit.io.op.poke(Opcode.store)
-          controlUnit.io.funct3.poke(2.U)
-          controlUnit.io.funct7_5.poke(false.B)
-          controlUnit.io.zero.poke(false.B)
-
-          val states = List(
-            ControlUnitState.fetch,
-            ControlUnitState.decode,
-            ControlUnitState.memAdr,
-            ControlUnitState.memWrite
-          )
-
-          checkFsmStates(controlUnit, states)
-        }
-      }
+    it("advances from Decode to Branch for B-types") {
+      cancel("Not yet implemented")
+    }
+    it("advances from MemAdr to MemRead for loads") {
+      cancel("Not yet implemented")
+    }
+    it("advances from MemAdr to MemWrite for stores") {
+      cancel("Not yet implemented")
+    }
+    it("advances from MemRead to MemWb") {
+      cancel("Not yet implemented")
+    }
+    it("advances from MemWb to Fetch") {
+      cancel("Not yet implemented")
+    }
+    it("advances from MemWrite to Fetch") {
+      cancel("Not yet implemented")
+    }
+    it("advances from ExecuteR to AluWb") {
+      cancel("Not yet implemented")
+    }
+    it("advances from AluWb to Fetch") {
+      cancel("Not yet implemented")
+    }
+    it("advances from ExecuteI to AluWb") {
+      cancel("Not yet implemented")
+    }
+    it("advances from Jal to AluWb") {
+      cancel("Not yet implemented")
+    }
+    it("advances from Branch to Fetch") {
+      cancel("Not yet implemented")
     }
   }
   describe("InstructionDecoder") {

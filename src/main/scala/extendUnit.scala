@@ -42,8 +42,5 @@ class ExtendUnit extends Module {
 }
 
 object ImmSrc extends ChiselEnum {
-  val iType = Value("b00".U)
-  val sType = Value("b01".U)
-  val bType = Value("b10".U)
-  val jType = Value("b11".U)
+  val iType, sType, bType, jType = Value
 }
