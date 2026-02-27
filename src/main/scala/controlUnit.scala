@@ -5,6 +5,7 @@ import chisel3.util._
 
 import com.rinthyAi.perilus.alu._
 import com.rinthyAi.perilus.extendUnit._
+import com.rinthyAi.perilus.memory._
 
 class ControlUnit(withDebug: Boolean = false) extends Module {
   // Figure 7.28 (page 423)
@@ -19,6 +20,7 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
     val resultSrc = Output(ResultSrc())
     val immSrc = Output(ImmSrc())
     val aluControl = Output(AluControl())
+    val dataMask = Output(DataMask())
     val debug = if (withDebug) Some(Output(new Bundle {
       val state = ControlUnitState()
     }))
@@ -44,6 +46,18 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
   io.memWrite := false.B
   io.regWrite := false.B
   io.resultSrc := ResultSrc.aluOutBuf
+
+  when(io.op === Opcode.load || io.op === Opcode.store) {
+    when(io.funct3 === 0.U || io.funct3 === 4.U) {
+      io.dataMask := DataMask.byte
+    }.elsewhen(io.funct3 === 1.U || io.funct3 === 5.U) {
+      io.dataMask := DataMask.half
+    }.otherwise {
+      io.dataMask := DataMask.word
+    }
+  }.otherwise {
+    io.dataMask := DataMask.word
+  }
 
   // Main FSM (Figure 7.45, page 436)
   switch(state) {

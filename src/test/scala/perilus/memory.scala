@@ -15,14 +15,17 @@ class MemoryTests extends AnyFunSpec with ChiselSim {
       simulate(new Memory(numWords, 32.W, initMemFile(ArrayBuffer.fill(numWords)(0x00000000)))) {
         memory =>
           {
+            // TODO add more tests for different dataMask configurations
             val addr1 = "h4".U
             val addr2 = "h18".U
             val data1 = "he7d857de".U
             val data2 = "h38cc122f".U
+            val dataMask = 0xffffffff
 
             memory.io.address.poke(addr1)
             memory.io.writeData.poke(data1)
             memory.io.writeEnable.poke(true.B)
+            memory.io.dataMask.poke(dataMask)
             memory.io.readData.expect(0.U)
             memory.clock.step(1)
             memory.io.readData.expect(data1)

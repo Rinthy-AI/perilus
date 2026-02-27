@@ -15,6 +15,7 @@ class Memory(
     val writeData = Input(UInt(width))
     val writeEnable = Input(Bool())
     val readData = Output(UInt(width))
+    val dataMask = Input(DataMask())
     val debug =
       if (withDebug) Some(new Bundle {
         val memAddr = Input(UInt(width))
@@ -35,8 +36,14 @@ class Memory(
   })
 
   when(io.writeEnable) {
-    memory.write(io.address >> AddressShift, io.writeData)
+    memory.write(io.address >> AddressShift, io.writeData & io.dataMask.asUInt)
   }
 
-  io.readData := memory.read(io.address >> AddressShift)
+  io.readData := memory.read(io.address >> AddressShift) & io.dataMask.asUInt
+}
+
+object DataMask extends ChiselEnum {
+  val byte = Value("h000000ff".U)
+  val half = Value("h0000ffff".U)
+  val word = Value("hffffffff".U)
 }

@@ -153,6 +153,7 @@ class Perilus(
   }
   io.memory.io.writeData := rd2Buf
   io.memory.io.writeEnable := controlUnit.io.memWrite
+  io.memory.io.dataMask := controlUnit.io.dataMask
 
   io.registerFile.io.a1 := instr(19, 15)
   io.registerFile.io.a2 := instr(24, 20)

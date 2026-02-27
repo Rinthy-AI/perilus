@@ -13,6 +13,23 @@ import com.rinthyAi.perilus.controlUnit.ControlUnitState
 class PerilusTests extends AnyFunSpec with ChiselSim {
   describe("Perilus") {
     describe("executes I-type RV32I instructions") {
+      def assembleIType(
+          funct3: Int,
+          funct7_5: Boolean,
+          rd: Int,
+          rs1: Int,
+          rs1Value: Int,
+          imm: Int,
+          op: Int
+      ): Int = {
+        val immWithFunct7_5Set = if (funct7_5) imm | (1 << 10) else imm
+        val immShifted = (immWithFunct7_5Set & 0xfff) << 20
+        val rs1Shifted = (rs1 & 0x1f) << 15
+        val funct3Shifted = (funct3 & 0x7) << 12
+        val rdShifted = (rd & 0x1f) << 7
+        val opMasked = op & 0x7f
+        immShifted | rs1Shifted | funct3Shifted | rdShifted | opMasked
+      }
       def testIType(
           funct3: Int,
           funct7_5: Boolean,
@@ -22,17 +39,10 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           imm: Int,
           operation: (Int, Int) => Int
       ): Unit = {
-        val immWithFunct7_5Set = if (funct7_5) imm | (1 << 10) else imm
-        val immShifted = (immWithFunct7_5Set & 0xfff) << 20
-        val rs1Shifted = (rs1 & 0x1f) << 15
-        val funct3Shifted = (funct3 & 0x7) << 12
-        val rdShifted = (rd & 0x1f) << 7
-        val op = 19
-        val instr = immShifted | rs1Shifted | funct3Shifted | rdShifted | op
-
         var registerFile = ArrayBuffer.fill(32)(0x00000000)
         registerFile(rs1) = rs1Value
         val memory = ArrayBuffer.fill(64)(0x00000000)
+        val instr = assembleIType(funct3, funct7_5, rd, rs1, rs1Value, imm, 19)
         memory(0) = instr
 
         val expected = operation(rs1Value, imm)
@@ -66,24 +76,20 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           }
         }
       }
-      it("lb") {
-        cancel("Not yet implemented")
-      }
-      it("lh") {
-        cancel("Not yet implemented")
-      }
-      it("lw") {
-        val rd = 21
-        val rs1 = 11
-        val base = 0x30
-        val imm = 0xa8
-        val memAddr = base + imm
-        val memData = 0x0f3f9400
-
+      def testLoad(
+          funct3: Int,
+          rd: Int,
+          rs1: Int,
+          rs1Value: Int,
+          imm: Int,
+          memData: Int,
+          dataMask: Int
+      ): Unit = {
+        val memAddr = rs1Value + imm
         var registerFile = ArrayBuffer.fill(32)(0x00000000)
-        registerFile(rs1) = 0x00000030
+        registerFile(rs1) = rs1Value
         var memory = ArrayBuffer.fill(64)(0x00000000)
-        memory(0) = 0x0a85aa83 // lw x21, 0xa8(x11)
+        memory(0) = assembleIType(funct3, false, rd, rs1, rs1Value, imm, 3)
         memory(memAddr / 4) = memData
 
         simulate(
@@ -96,36 +102,76 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           {
             val perilusDebug = perilus.io.debug.get
 
-            // rs1 contains the base pointer
             perilusDebug.reg.poke(rs1)
-            perilusDebug.regData.expect(base)
-
-            // rd is empty
+            perilusDebug.regData.expect(toULong(rs1Value))
             perilusDebug.reg.poke(rd)
-            perilusDebug.regData.expect(0.U)
-
-            // memAddr contains memData
+            perilusDebug.regData.expect(if (rd == rs1) toULong(rs1Value) else 0)
             perilusDebug.memAddr.poke(memAddr)
-            perilusDebug.memData.expect(memData)
+            perilusDebug.memData.expect(toULong(memData))
 
-            // execute the instruction
             perilus.clock.step(5)
 
-            // rd contains memData
             perilusDebug.reg.poke(rd)
-            perilusDebug.regData.expect(memData)
-
-            // contents of memAddr have not changed
+            perilusDebug.regData.expect(toULong(memData & dataMask))
             perilusDebug.memAddr.poke(memAddr)
-            perilusDebug.memData.expect(memData)
+            perilusDebug.memData.expect(toULong(memData))
           }
         }
       }
+      it("lb") {
+        testLoad(
+          funct3 = 0,
+          rd = 10,
+          rs1 = 10,
+          rs1Value = 0x14,
+          imm = -0x07,
+          memData = 0x5b9ccada,
+          dataMask = 0x000000ff
+        )
+      }
+      it("lh") {
+        testLoad(
+          funct3 = 1,
+          rd = 31,
+          rs1 = 14,
+          rs1Value = 0x0e,
+          imm = 0x14,
+          memData = 0x8b9d4da4,
+          dataMask = 0x0000ffff
+        )
+      }
+      it("lw") {
+        testLoad(
+          funct3 = 2,
+          rd = 21,
+          rs1 = 11,
+          rs1Value = 0x30,
+          imm = 0xa8,
+          memData = 0x0f3f9400,
+          dataMask = 0xffffffff
+        )
+      }
       it("lbu") {
-        cancel("Not yet implemented")
+        testLoad(
+          funct3 = 4,
+          rd = 7,
+          rs1 = 13,
+          rs1Value = 0x3b,
+          imm = 0x07,
+          memData = 0x55c9a074,
+          dataMask = 0x000000ff
+        )
       }
       it("lhu") {
-        cancel("Not yet implemented")
+        testLoad(
+          funct3 = 5,
+          rd = 20,
+          rs1 = 4,
+          rs1Value = 0x25,
+          imm = 0x2f,
+          memData = 0xb3fecaab,
+          dataMask = 0x0000ffff
+        )
       }
       it("addi") {
         testIType(
@@ -239,25 +285,29 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
     }
     describe("executes S-type RV32I instructions") {
-      it("sb") {
-        cancel("Not yet implemented")
-      }
-      it("sh") {
-        cancel("Not yet implemented")
-      }
-      it("sw") {
-        val rs1 = 9
-        val rs2 = 6
-        val base = 0x38
-        val imm = -4
-        val memAddr = base + imm
-        val memData = 0x01830169
+      def testSType(
+          funct3: Int,
+          rs1: Int,
+          rs1Value: Int,
+          rs2: Int,
+          rs2Value: Int,
+          imm: Int,
+          dataMask: Int
+      ): Unit = {
+        val immUpper = (imm & 0xfe0) << 20
+        val rs2Shifted = (rs2 & 0x1f) << 20
+        val rs1Shifted = (rs1 & 0x1f) << 15
+        val funct3Shifted = (funct3 & 0x7) << 12
+        val immLower = (imm & 0x1f) << 7
+        val op = 0x23
+        val instr = immUpper | rs2Shifted | rs1Shifted | funct3Shifted | immLower | op
 
         var registerFile = ArrayBuffer.fill(32)(0x00000000)
-        registerFile(rs1) = base
-        registerFile(rs2) = memData
+        registerFile(rs1) = rs1Value
+        registerFile(rs2) = rs2Value
         var memory = ArrayBuffer.fill(64)(0x00000000)
-        memory(0) = 0xfe64ae23 // sw x6, -4(x9)
+        memory(0) = instr
+        val memAddr = rs1Value + imm
 
         simulate(
           new Perilus(
@@ -269,26 +319,52 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           {
             val perilusDebug = perilus.io.debug.get
 
-            // rs1 contains the base pointer
             perilusDebug.reg.poke(rs1)
-            perilusDebug.regData.expect(base)
-
-            // rs2 contains data to be stored
+            perilusDebug.regData.expect(toULong(rs1Value))
             perilusDebug.reg.poke(rs2)
-            perilusDebug.regData.expect(memData)
-
-            // memAddr doesn't have memData yet
+            perilusDebug.regData.expect(toULong(rs2Value))
             perilusDebug.memAddr.poke(memAddr)
-            assert(perilusDebug.memData.peek().litValue != memData)
+            assert(perilusDebug.memData.peek().litValue != toULong(rs2Value & dataMask))
 
-            // execute the instruction
             perilus.clock.step(4)
 
-            // contents of memAddr have not changed
             perilusDebug.memAddr.poke(memAddr)
-            perilusDebug.memData.expect(memData)
+            perilusDebug.memData.expect(toULong(rs2Value & dataMask))
           }
         }
+      }
+      it("sb") {
+        testSType(
+          funct3 = 0,
+          rs1 = 17,
+          rs1Value = 0x1c,
+          rs2 = 21,
+          rs2Value = 0x52ba341a,
+          imm = -0x18,
+          dataMask = 0x000000ff
+        )
+      }
+      it("sh") {
+        testSType(
+          funct3 = 1,
+          rs1 = 4,
+          rs1Value = 0x21,
+          rs2 = 6,
+          rs2Value = 0x02d3b5bd,
+          imm = -0x9,
+          dataMask = 0x0000ffff
+        )
+      }
+      it("sw") {
+        testSType(
+          funct3 = 2,
+          rs1 = 9,
+          rs1Value = 0x38,
+          rs2 = 6,
+          rs2Value = 0x01830169,
+          imm = -0x4,
+          dataMask = 0xffffffff
+        )
       }
     }
     describe("executes R-type RV32I instructions") {
@@ -329,19 +405,21 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             val perilusDebug = perilus.io.debug.get
 
             perilusDebug.memAddr.poke(0)
-            perilusDebug.memData.expect(instr)
+            perilusDebug.memData.expect(toULong(instr))
             perilusDebug.reg.poke(rs1)
             perilusDebug.regData.expect(toULong(rs1Value))
             perilusDebug.reg.poke(rs2)
             perilusDebug.regData.expect(toULong(rs2Value))
             perilusDebug.reg.poke(rd)
-            perilusDebug.regData.expect(if (rd == rs1) rs1Value else if (rd == rs2) rs2Value else 0)
+            perilusDebug.regData.expect(
+              if (rd == rs1) toULong(rs1Value) else if (rd == rs2) toULong(rs2Value) else 0
+            )
 
             perilus.clock.step(4)
             perilus.io.pc.expect(4)
 
             perilusDebug.memAddr.poke(0)
-            perilusDebug.memData.expect(instr)
+            perilusDebug.memData.expect(toULong(instr))
             perilusDebug.reg.poke(rs1)
             perilusDebug.regData.expect(if (rd == rs1) toULong(expected) else toULong(rs1Value))
             perilusDebug.reg.poke(rs2)
@@ -514,7 +592,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
 
             // pc should be at address 1 because x3 != x6
             val expected_1 = pc_t.litValue + 4
-            perilus.io.pc.expect(expected_1.U)
+            perilus.io.pc.expect(expected_1)
             pc_t = perilus.io.pc.peek()
 
             // execute the second beq instruction:
@@ -523,7 +601,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
 
             // pc should be at address 5 because x6 == x9
             val expected_2 = pc_t.litValue + offset.litValue
-            perilus.io.pc.expect(expected_2.U)
+            perilus.io.pc.expect(expected_2)
           }
         }
       }
