@@ -14,8 +14,11 @@ class ExtendUnit extends Module {
 
   // Table 7.5 (page 412)
   switch(io.immSrc) {
-    is(ImmSrc.iType) {
+    is(ImmSrc.iTypeSigned) {
       io.immExt := Cat(Fill(20, io.input(24)), io.input(24, 13))
+    }
+    is(ImmSrc.iTypeUnsigned) {
+      io.immExt := Cat(Fill(20, 0.U), io.input(24, 13))
     }
     is(ImmSrc.sType) {
       io.immExt := Cat(Fill(20, io.input(24)), io.input(24, 18), io.input(4, 0))
@@ -42,5 +45,5 @@ class ExtendUnit extends Module {
 }
 
 object ImmSrc extends ChiselEnum {
-  val iType, sType, bType, jType = Value
+  val iTypeSigned, iTypeUnsigned, sType, bType, jType = Value
 }

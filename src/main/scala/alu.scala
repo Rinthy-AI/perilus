@@ -13,6 +13,13 @@ class Alu extends Module {
 
   io.aluResult := 0.U
 
+  val srcBShift = WireInit(0.U)
+  when(io.srcB(5)) {
+    srcBShift := 32.U
+  }.otherwise {
+    srcBShift := io.srcB(4, 0)
+  }
+
   switch(io.aluControl) {
     is(AluControl.add) {
       io.aluResult := io.srcA + io.srcB
@@ -21,7 +28,7 @@ class Alu extends Module {
       io.aluResult := io.srcA - io.srcB
     }
     is(AluControl.sll) {
-      io.aluResult := io.srcA << io.srcB(5, 0)
+      io.aluResult := io.srcA << srcBShift
     }
     is(AluControl.slt) {
       io.aluResult := (io.srcA.asSInt < io.srcB.asSInt).asUInt
@@ -33,10 +40,10 @@ class Alu extends Module {
       io.aluResult := io.srcA ^ io.srcB
     }
     is(AluControl.srl) {
-      io.aluResult := io.srcA >> io.srcB(5, 0)
+      io.aluResult := io.srcA >> srcBShift
     }
     is(AluControl.sra) {
-      io.aluResult := (io.srcA.asSInt >> io.srcB(5, 0)).asUInt
+      io.aluResult := (io.srcA.asSInt >> srcBShift).asUInt
     }
     is(AluControl.or) {
       io.aluResult := io.srcA | io.srcB

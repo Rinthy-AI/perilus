@@ -148,6 +148,7 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
   io.aluControl := aluDecoder.io.aluControl
 
   instrDecoder.io.op := io.op
+  instrDecoder.io.funct3 := io.funct3
   io.immSrc := instrDecoder.io.immSrc
 }
 
@@ -202,14 +203,19 @@ class AluDecoder extends Module {
 class InstructionDecoder extends Module {
   val io = IO(new Bundle {
     val op = Input(Opcode())
+    val funct3 = Input(UInt(3.W))
     val immSrc = Output(ImmSrc())
   })
 
-  io.immSrc := ImmSrc.iType
+  io.immSrc := ImmSrc.iTypeSigned
 
   switch(io.op) {
     is(Opcode.load) {
-      io.immSrc := ImmSrc.iType
+      when(io.funct3 === 4.U || io.funct3 === 5.U) {
+        io.immSrc := ImmSrc.iTypeUnsigned
+      }.otherwise {
+        io.immSrc := ImmSrc.iTypeSigned
+      }
     }
     is(Opcode.store) {
       io.immSrc := ImmSrc.sType
@@ -218,7 +224,11 @@ class InstructionDecoder extends Module {
       io.immSrc := ImmSrc.bType
     }
     is(Opcode.immediate) {
-      io.immSrc := ImmSrc.iType
+      when(io.funct3 === 3.U) {
+        io.immSrc := ImmSrc.iTypeUnsigned
+      }.otherwise {
+        io.immSrc := ImmSrc.iTypeSigned
+      }
     }
     is(Opcode.jal) {
       io.immSrc := ImmSrc.jType

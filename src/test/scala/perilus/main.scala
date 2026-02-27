@@ -13,6 +13,59 @@ import com.rinthyAi.perilus.controlUnit.ControlUnitState
 class PerilusTests extends AnyFunSpec with ChiselSim {
   describe("Perilus") {
     describe("executes I-type RV32I instructions") {
+      def testIType(
+          funct3: Int,
+          funct7_5: Boolean,
+          rd: Int,
+          rs1: Int,
+          rs1Value: Int,
+          imm: Int,
+          operation: (Int, Int) => Int
+      ): Unit = {
+        val immWithFunct7_5Set = if (funct7_5) imm | (1 << 10) else imm
+        val immShifted = (immWithFunct7_5Set & 0xfff) << 20
+        val rs1Shifted = (rs1 & 0x1f) << 15
+        val funct3Shifted = (funct3 & 0x7) << 12
+        val rdShifted = (rd & 0x1f) << 7
+        val op = 19
+        val instr = immShifted | rs1Shifted | funct3Shifted | rdShifted | op
+
+        var registerFile = ArrayBuffer.fill(32)(0x00000000)
+        registerFile(rs1) = rs1Value
+        val memory = ArrayBuffer.fill(64)(0x00000000)
+        memory(0) = instr
+
+        val expected = operation(rs1Value, imm)
+
+        simulate(
+          new Perilus(
+            initRegs = initMemFile(registerFile),
+            initMem = initMemFile(memory),
+            withDebug = true
+          )
+        ) { perilus =>
+          {
+            val perilusDebug = perilus.io.debug.get
+
+            perilusDebug.memAddr.poke(0)
+            perilusDebug.memData.expect(toULong(instr))
+            perilusDebug.reg.poke(rs1)
+            perilusDebug.regData.expect(toULong(rs1Value))
+            perilusDebug.reg.poke(rd)
+            perilusDebug.regData.expect(if (rs1 == rd) toULong(rs1Value) else 0)
+
+            perilus.clock.step(4)
+            perilus.io.pc.expect(4)
+
+            perilusDebug.memAddr.poke(0)
+            perilusDebug.memData.expect(toULong(instr))
+            perilusDebug.reg.poke(rs1)
+            perilusDebug.regData.expect(if (rs1 == rd) toULong(expected) else toULong(rs1Value))
+            perilusDebug.reg.poke(rd)
+            perilusDebug.regData.expect(toULong(expected))
+          }
+        }
+      }
       it("lb") {
         cancel("Not yet implemented")
       }
@@ -77,6 +130,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       it("addi") {
         testIType(
           funct3 = 0,
+          funct7_5 = false,
           rd = 17,
           rs1 = 27,
           rs1Value = 0x60f49452,
@@ -85,33 +139,75 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
         )
       }
       it("slli") {
-        cancel("Not yet implemented")
+        testIType(
+          funct3 = 1,
+          funct7_5 = false,
+          rd = 12,
+          rs1 = 20,
+          rs1Value = 0x27a091d1,
+          imm = 0x009,
+          operation = (rs1, imm) => rs1 << imm.min(32)
+        )
       }
       it("slti") {
         testIType(
           funct3 = 2,
+          funct7_5 = false,
           rd = 27,
           rs1 = 7,
           rs1Value = 0x451753fc,
           imm = 0x24e,
-          operation = (rs1, imm) => if (toULong(rs1) < toULong(imm)) 1 else 0
+          operation = (rs1, imm) => if (rs1 < imm) 1 else 0
         )
       }
       it("sltiu") {
-        cancel("Not yet implemented")
+        testIType(
+          funct3 = 3,
+          funct7_5 = false,
+          rd = 1,
+          rs1 = 24,
+          rs1Value = 0x9efde28d,
+          imm = 0xdf6,
+          operation = (rs1, imm) => if (toULong(rs1) < toULong(imm)) 1 else 0
+        )
       }
       it("xori") {
-        cancel("Not yet implemented")
+        testIType(
+          funct3 = 4,
+          funct7_5 = false,
+          rd = 4,
+          rs1 = 4,
+          rs1Value = 0x1649835d,
+          imm = 0x9fa,
+          operation = (rs1, imm) => rs1 ^ (if ((imm & (1 << 11)) != 0) 0xfffff000 | imm else imm)
+        )
       }
       it("srli") {
-        cancel("Not yet implemented")
+        testIType(
+          funct3 = 5,
+          funct7_5 = false,
+          rd = 2,
+          rs1 = 3,
+          rs1Value = 0x2d178ee5,
+          imm = 26,
+          operation = (rs1, imm) => rs1 >>> imm.min(32)
+        )
       }
       it("srai") {
-        cancel("Not yet implemented")
+        testIType(
+          funct3 = 5,
+          funct7_5 = true,
+          rd = 21,
+          rs1 = 19,
+          rs1Value = 0xb2cb537c,
+          imm = 7,
+          operation = (rs1, imm) => rs1 >> imm.min(32)
+        )
       }
       it("ori") {
         testIType(
           funct3 = 6,
+          funct7_5 = true,
           rd = 28,
           rs1 = 18,
           rs1Value = 0xc5212c23,
@@ -122,6 +218,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       it("andi") {
         testIType(
           funct3 = 7,
+          funct7_5 = true,
           rd = 12,
           rs1 = 1,
           rs1Value = 0x275157ac,
@@ -195,6 +292,65 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
     }
     describe("executes R-type RV32I instructions") {
+      def testRType(
+          funct3: Int,
+          funct7_5: Boolean,
+          rd: Int,
+          rs1: Int,
+          rs2: Int,
+          rs1Value: Int,
+          rs2Value: Int,
+          operation: (Int, Int) => Int
+      ): Unit = {
+        val funct7 = (if (funct7_5) 1 << 5 else 0) << 25
+        val rs2Shifted = (rs2 & 0x1f) << 20
+        val rs1Shifted = (rs1 & 0x1f) << 15
+        val funct3Shifted = (funct3 & 0x7) << 12
+        val rdShifted = (rd & 0x1f) << 7
+        val op = 51
+        val instr = funct7 | rs2Shifted | rs1Shifted | funct3Shifted | rdShifted | op
+
+        var registerFile = ArrayBuffer.fill(32)(0x00000000)
+        registerFile(rs1) = rs1Value
+        registerFile(rs2) = rs2Value
+        var memory = ArrayBuffer.fill(64)(0x00000000)
+        memory(0) = instr
+
+        val expected = operation(rs1Value, rs2Value)
+
+        simulate(
+          new Perilus(
+            initRegs = initMemFile(registerFile),
+            initMem = initMemFile(memory),
+            withDebug = true
+          )
+        ) { perilus =>
+          {
+            val perilusDebug = perilus.io.debug.get
+
+            perilusDebug.memAddr.poke(0)
+            perilusDebug.memData.expect(instr)
+            perilusDebug.reg.poke(rs1)
+            perilusDebug.regData.expect(toULong(rs1Value))
+            perilusDebug.reg.poke(rs2)
+            perilusDebug.regData.expect(toULong(rs2Value))
+            perilusDebug.reg.poke(rd)
+            perilusDebug.regData.expect(if (rd == rs1) rs1Value else if (rd == rs2) rs2Value else 0)
+
+            perilus.clock.step(4)
+            perilus.io.pc.expect(4)
+
+            perilusDebug.memAddr.poke(0)
+            perilusDebug.memData.expect(instr)
+            perilusDebug.reg.poke(rs1)
+            perilusDebug.regData.expect(if (rd == rs1) toULong(expected) else toULong(rs1Value))
+            perilusDebug.reg.poke(rs2)
+            perilusDebug.regData.expect(if (rd == rs2) toULong(expected) else toULong(rs2Value))
+            perilusDebug.reg.poke(rd)
+            perilusDebug.regData.expect(toULong(expected))
+          }
+        }
+      }
       it("add") {
         testRType(
           funct3 = 0,
@@ -228,7 +384,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs2 = 25,
           rs1Value = 0xd021eb67,
           rs2Value = 17,
-          operation = (rs1, rs2) => rs1 << rs2
+          operation = (rs1, rs2) => rs1 << rs2.min(32)
         )
       }
       it("slt") {
@@ -276,7 +432,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs2 = 25,
           rs1Value = 0x3fa60574,
           rs2Value = 29,
-          operation = (rs1, rs2) => rs1 >>> rs2
+          operation = (rs1, rs2) => rs1 >>> rs2.min(32)
         )
       }
       it("sra") {
@@ -288,7 +444,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs2 = 5,
           rs1Value = 0xee91cf2d,
           rs2Value = 10,
-          operation = (rs1, rs2) => rs1 >> rs2
+          operation = (rs1, rs2) => rs1 >> rs2.min(32)
         )
       }
       it("or") {
@@ -487,116 +643,6 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             perilusDebug.regData.expect(4181)
           }
         }
-      }
-    }
-  }
-  def testIType(
-      funct3: Int,
-      rd: Int,
-      rs1: Int,
-      rs1Value: Int,
-      imm: Int,
-      operation: (Int, Int) => Int
-  ): Unit = {
-    val immShifted = (imm & 0xfff) << 20
-    val rs1Shifted = (rs1 & 0x1f) << 15
-    val funct3Shifted = (funct3 & 0x7) << 12
-    val rdShifted = (rd & 0x1f) << 7
-    val op = 19
-    val instr = immShifted | rs1Shifted | funct3Shifted | rdShifted | op
-
-    var registerFile = ArrayBuffer.fill(32)(0x00000000)
-    registerFile(rs1) = rs1Value
-    val memory = ArrayBuffer.fill(64)(0x00000000)
-    memory(0) = instr
-
-    val expected = operation(rs1Value, imm)
-
-    simulate(
-      new Perilus(
-        initRegs = initMemFile(registerFile),
-        initMem = initMemFile(memory),
-        withDebug = true
-      )
-    ) { perilus =>
-      {
-        val perilusDebug = perilus.io.debug.get
-
-        perilusDebug.memAddr.poke(0)
-        perilusDebug.memData.expect(instr)
-        perilusDebug.reg.poke(rs1)
-        perilusDebug.regData.expect(toULong(rs1Value))
-        perilusDebug.reg.poke(rd)
-        perilusDebug.regData.expect(0)
-
-        perilus.clock.step(4)
-        perilus.io.pc.expect(4)
-
-        perilusDebug.memAddr.poke(0)
-        perilusDebug.memData.expect(instr)
-        perilusDebug.reg.poke(rs1)
-        perilusDebug.regData.expect(toULong(rs1Value))
-        perilusDebug.reg.poke(rd)
-        perilusDebug.regData.expect(toULong(expected))
-      }
-    }
-  }
-  def testRType(
-      funct3: Int,
-      funct7_5: Boolean,
-      rd: Int,
-      rs1: Int,
-      rs2: Int,
-      rs1Value: Int,
-      rs2Value: Int,
-      operation: (Int, Int) => Int
-  ): Unit = {
-    val funct7 = (if (funct7_5) 1 << 5 else 0) << 25
-    val rs2Shifted = (rs2 & 0x1f) << 20
-    val rs1Shifted = (rs1 & 0x1f) << 15
-    val funct3Shifted = (funct3 & 0x7) << 12
-    val rdShifted = (rd & 0x1f) << 7
-    val op = 51
-    val instr = funct7 | rs2Shifted | rs1Shifted | funct3Shifted | rdShifted | op
-
-    var registerFile = ArrayBuffer.fill(32)(0x00000000)
-    registerFile(rs1) = rs1Value
-    registerFile(rs2) = rs2Value
-    var memory = ArrayBuffer.fill(64)(0x00000000)
-    memory(0) = instr
-
-    val expected = operation(rs1Value, rs2Value)
-
-    simulate(
-      new Perilus(
-        initRegs = initMemFile(registerFile),
-        initMem = initMemFile(memory),
-        withDebug = true
-      )
-    ) { perilus =>
-      {
-        val perilusDebug = perilus.io.debug.get
-
-        perilusDebug.memAddr.poke(0)
-        perilusDebug.memData.expect(instr)
-        perilusDebug.reg.poke(rs1)
-        perilusDebug.regData.expect(toULong(rs1Value))
-        perilusDebug.reg.poke(rs2)
-        perilusDebug.regData.expect(toULong(rs2Value))
-        perilusDebug.reg.poke(rd)
-        perilusDebug.regData.expect(0)
-
-        perilus.clock.step(4)
-        perilus.io.pc.expect(4)
-
-        perilusDebug.memAddr.poke(0)
-        perilusDebug.memData.expect(instr)
-        perilusDebug.reg.poke(rs1)
-        perilusDebug.regData.expect(toULong(rs1Value))
-        perilusDebug.reg.poke(rs2)
-        perilusDebug.regData.expect(toULong(rs2Value))
-        perilusDebug.reg.poke(rd)
-        perilusDebug.regData.expect(toULong(expected))
       }
     }
   }

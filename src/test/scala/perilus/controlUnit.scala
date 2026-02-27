@@ -112,13 +112,15 @@ class ControlUnitTests extends AnyFunSpec with ChiselSim {
       simulate(new InstructionDecoder) { instrDecoder =>
         {
           instrDecoder.io.op.poke(Opcode.load)
-          instrDecoder.io.immSrc.expect(ImmSrc.iType)
+          // TODO include iTypeUnsigned as well
+          instrDecoder.io.immSrc.expect(ImmSrc.iTypeSigned)
           instrDecoder.io.op.poke(Opcode.store)
           instrDecoder.io.immSrc.expect(ImmSrc.sType)
           instrDecoder.io.op.poke(Opcode.branch)
           instrDecoder.io.immSrc.expect(ImmSrc.bType)
           instrDecoder.io.op.poke(Opcode.immediate)
-          instrDecoder.io.immSrc.expect(ImmSrc.iType)
+          // TODO include iTypeUnsigned as well
+          instrDecoder.io.immSrc.expect(ImmSrc.iTypeSigned)
           instrDecoder.io.op.poke(Opcode.jal)
           instrDecoder.io.immSrc.expect(ImmSrc.jType)
         }
