@@ -83,6 +83,8 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
         state := ControlUnitState.executeI
       }.elsewhen(io.op === Opcode.jal) {
         state := ControlUnitState.jal
+      }.elsewhen(io.op === Opcode.jalr) {
+        state := ControlUnitState.jalrLink
       }.elsewhen(io.op === Opcode.branch) {
         state := ControlUnitState.branch
       }.elsewhen(io.op === Opcode.env || io.op === Opcode.fence) {
@@ -142,6 +144,22 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
       aluOp := AluOp.memory
       pcUpdate := true.B
       state := ControlUnitState.aluWb
+    }
+    is(ControlUnitState.jalrLink) {
+      io.aluSrcA := AluSrcA.oldPc
+      io.aluSrcB := AluSrcB.four
+      io.resultSrc := ResultSrc.aluResult
+      io.regWrite := true.B
+      aluOp := AluOp.arithmetic
+      state := ControlUnitState.jalrJump
+    }
+    is(ControlUnitState.jalrJump) {
+      io.aluSrcA := AluSrcA.rd1
+      io.aluSrcB := AluSrcB.immExt
+      io.resultSrc := ResultSrc.aluResult
+      aluOp := AluOp.arithmetic
+      pcUpdate := true.B
+      state := ControlUnitState.fetch
     }
     is(ControlUnitState.branch) {
       io.aluSrcA := AluSrcA.rd1
@@ -251,7 +269,8 @@ class InstructionDecoder extends Module {
 }
 
 object ControlUnitState extends ChiselEnum {
-  val fetch, decode, memAdr, memRead, memWb, memWrite, executeR, aluWb, executeI, jal, branch =
+  val fetch, decode, memAdr, memRead, memWb, memWrite, executeR, aluWb, executeI, jal, jalrLink,
+      jalrJump, branch =
     Value
 }
 

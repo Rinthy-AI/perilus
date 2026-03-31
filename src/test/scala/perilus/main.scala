@@ -37,12 +37,14 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs1: Int,
           rs1Value: Int,
           imm: Int,
-          operation: (Int, Int) => Int
+          operation: (Int, Int) => Int,
+          pc: Int = 4,
+          opcode: Int = 19
       ): Unit = {
         var registerFile = ArrayBuffer.fill(32)(0x00000000)
         registerFile(rs1) = rs1Value
         val memory = ArrayBuffer.fill(64)(0x00000000)
-        val instr = assembleIType(funct3, funct7_5, rd, rs1, rs1Value, imm, 19)
+        val instr = assembleIType(funct3, funct7_5, rd, rs1, rs1Value, imm, opcode)
         memory(0) = instr
 
         val expected = operation(rs1Value, imm)
@@ -65,7 +67,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             perilusDebug.regData.expect(if (rs1 == rd) toULong(rs1Value) else 0)
 
             perilus.clock.step(4)
-            perilus.io.pc.expect(4)
+            perilus.io.pc.expect(toULong(pc))
 
             perilusDebug.memAddr.poke(0)
             perilusDebug.memData.expect(toULong(instr))
@@ -273,7 +275,17 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
         )
       }
       it("jalr") {
-        cancel("Not yet implemented")
+        testIType(
+          funct3 = 0,
+          funct7_5 = false,
+          rd = 3,
+          rs1 = 8,
+          rs1Value = 32,
+          imm = 10,
+          operation = (_rs1, _imm) => 4,
+          pc = 42,
+          opcode = 103
+        )
       }
     }
     describe("executes U-type RV32I instructions") {
