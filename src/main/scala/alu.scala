@@ -8,10 +8,12 @@ class Alu extends Module {
     val aluControl = Input(AluControl())
     val srcA, srcB = Input(UInt(32.W))
     val aluResult = Output(UInt(32.W))
-    val zero = Output(Bool())
+    val zero, lessThan = Output(Bool())
   })
 
   io.aluResult := 0.U
+  io.zero := false.B
+  io.lessThan := false.B
 
   val srcBShift = WireInit(0.U)
   when(io.srcB(5)) {
@@ -26,15 +28,18 @@ class Alu extends Module {
     }
     is(AluControl.sub) {
       io.aluResult := io.srcA - io.srcB
+      io.zero := io.aluResult === 0.U
     }
     is(AluControl.sll) {
       io.aluResult := io.srcA << srcBShift
     }
     is(AluControl.slt) {
       io.aluResult := (io.srcA.asSInt < io.srcB.asSInt).asUInt
+      io.lessThan := io.aluResult === 1.U
     }
     is(AluControl.sltu) {
       io.aluResult := io.srcA < io.srcB
+      io.lessThan := io.aluResult === 1.U
     }
     is(AluControl.xor) {
       io.aluResult := io.srcA ^ io.srcB
@@ -52,8 +57,6 @@ class Alu extends Module {
       io.aluResult := io.srcA & io.srcB
     }
   }
-
-  io.zero := io.aluResult === 0.U
 }
 
 object AluControl extends ChiselEnum {

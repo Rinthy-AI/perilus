@@ -13,7 +13,7 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
     val op = Input(Opcode())
     val funct3 = Input(UInt(3.W))
     val funct7_5 = Input(Bool())
-    val zero = Input(Bool())
+    val zero, lessThan = Input(Bool())
     val adrSrc, irWrite, memWrite, pcWrite, regWrite = Output(Bool())
     val aluSrcA = Output(AluSrcA())
     val aluSrcB = Output(AluSrcB())
@@ -171,7 +171,11 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
     }
   }
 
-  io.pcWrite := (io.zero && branch) || pcUpdate
+  io.pcWrite := ((branch && ((io.funct3 === 0.U && io.zero)
+    || (io.funct3 === 1.U && !io.zero)
+    || ((io.funct3 === 4.U || io.funct3 === 6.U) && io.lessThan)
+    || ((io.funct3 === 5.U || io.funct3 === 7.U) && !io.lessThan)))
+  || pcUpdate)
 
   aluDecoder.io.aluOp := aluOp
   aluDecoder.io.funct3 := io.funct3
@@ -201,7 +205,15 @@ class AluDecoder extends Module {
       io.aluControl := AluControl.add
     }
     is(AluOp.branch) {
-      io.aluControl := AluControl.sub
+      when(io.funct3 === 0.U || io.funct3 === 1.U) {
+        io.aluControl := AluControl.sub
+      }.elsewhen(io.funct3 === 4.U || io.funct3 === 5.U) {
+        io.aluControl := AluControl.slt
+      }.elsewhen(io.funct3 === 6.U || io.funct3 === 7.U) {
+        io.aluControl := AluControl.sltu
+      }.otherwise {
+        io.aluControl := AluControl.sub
+      }
     }
     is(AluOp.arithmetic) {
       when(

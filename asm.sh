@@ -10,4 +10,3 @@ llvm-objcopy -O binary -j .text "$TMPOBJ" "$TMPBIN"
 od -An -tx4 -w4 -v "$TMPBIN" | sed "s/^ *//"
 
 rm "$TMPOBJ" "$TMPBIN"
-

@@ -137,6 +137,7 @@ class Perilus(
     }
   }
   controlUnit.io.zero := alu.io.zero
+  controlUnit.io.lessThan := alu.io.lessThan
 
   val (opcode, opcodeValid) = Opcode.safe(instr(6, 0))
   controlUnit.io.op := opcode

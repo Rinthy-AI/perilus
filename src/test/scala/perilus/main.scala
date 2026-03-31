@@ -563,19 +563,28 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
     }
     describe("executes B-type RV32I instructions") {
-      it("beq") {
-        val rs1 = 3
-        val rs2 = 6
-        val rs3 = 9
-        val offset = 16.U
+      def testBType(
+          funct3: Int,
+          rs1: Int,
+          rs1Value: Int,
+          rs2: Int,
+          rs2Value: Int,
+          imm: Int,
+          takeBranch: Boolean
+      ) = {
+        val immUpper = (((imm & 0x1000) >> 6) | (imm & 0x7e0) >> 5) << 25
+        val rs2Shifted = (rs2 & 0x1f) << 20
+        val rs1Shifted = (rs1 & 0x1f) << 15
+        val funct3Shifted = (funct3 & 0x7) << 12
+        val immLower = ((imm & 0x1e) | ((imm & 0x800) >> 11)) << 7
+        val op = 0x63
+        val instr = immUpper | rs2Shifted | rs1Shifted | funct3Shifted | immLower | op
 
         var registerFile = ArrayBuffer.fill(32)(0x00000000)
-        registerFile(rs1) = 0xabcdef01
-        registerFile(rs2) = 0xabcde012
-        registerFile(rs3) = 0xabcde012
+        registerFile(rs1) = rs1Value
+        registerFile(rs2) = rs2Value
         var memory = ArrayBuffer.fill(64)(0x00000000)
-        memory(0) = 0x02618563 // beq x3, x6, 0x4
-        memory(1) = 0x00930863 // beq x6, x9, 0x4
+        memory(0) = instr
 
         simulate(
           new Perilus(
@@ -587,50 +596,142 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           {
             val perilusDebug = perilus.io.debug.get
 
-            // Verify that registers are/aren't equal as expected
+            perilusDebug.memAddr.poke(0)
+            perilusDebug.memData.expect(toULong(instr))
             perilusDebug.reg.poke(rs1)
-            val rs1_t = perilusDebug.regData.peek()
+            perilusDebug.regData.expect(toULong(rs1Value))
             perilusDebug.reg.poke(rs2)
-            val rs2_t = perilusDebug.regData.peek()
-            perilusDebug.reg.poke(rs3)
-            val rs3_t = perilusDebug.regData.peek()
-            assert(rs1_t.litValue != rs2_t.litValue)
-            assert(rs2_t.litValue == rs3_t.litValue)
+            perilusDebug.regData.expect(toULong(rs2Value))
 
-            var pc_t = perilus.io.pc.peek()
-            // execute the first beq instruction:fe64ae23
-            //   beq x3, x6, 0x4
             perilus.clock.step(3)
 
-            // pc should be at address 1 because x3 != x6
-            val expected_1 = pc_t.litValue + 4
-            perilus.io.pc.expect(expected_1)
-            pc_t = perilus.io.pc.peek()
-
-            // execute the second beq instruction:
-            //   beq x6, x9, 0x4
-            perilus.clock.step(3)
-
-            // pc should be at address 5 because x6 == x9
-            val expected_2 = pc_t.litValue + offset.litValue
-            perilus.io.pc.expect(expected_2)
+            if (takeBranch) {
+              perilus.io.pc.expect(toULong(imm))
+            } else {
+              perilus.io.pc.expect(4.U)
+            }
           }
         }
       }
+      it("beq") {
+        testBType(
+          funct3 = 0,
+          rs1 = 3,
+          rs1Value = 0xe62cca72,
+          rs2 = 6,
+          rs2Value = 0xe62cca72,
+          imm = 0x548,
+          takeBranch = true
+        )
+        testBType(
+          funct3 = 0,
+          rs1 = 13,
+          rs1Value = 0x9eec72e3,
+          rs2 = 4,
+          rs2Value = 0xb7899861,
+          imm = 0x794,
+          takeBranch = false
+        )
+      }
       it("bne") {
-        cancel("Not yet implemented")
+        testBType(
+          funct3 = 1,
+          rs1 = 26,
+          rs1Value = 0x980022bb,
+          rs2 = 18,
+          rs2Value = 0xc9b29fd7,
+          imm = 0x272,
+          takeBranch = true
+        )
+        testBType(
+          funct3 = 1,
+          rs1 = 17,
+          rs1Value = 0x9eec72e3,
+          rs2 = 18,
+          rs2Value = 0x9eec72e3,
+          imm = -0x2b4,
+          takeBranch = false
+        )
       }
       it("blt") {
-        cancel("Not yet implemented")
+        testBType(
+          funct3 = 4,
+          rs1 = 14,
+          rs1Value = -0x787a0531,
+          rs2 = 25,
+          rs2Value = -0x3f9c200f,
+          imm = -0x418,
+          takeBranch = true
+        )
+        testBType(
+          funct3 = 4,
+          rs1 = 4,
+          rs1Value = 0x68c0f4c7,
+          rs2 = 5,
+          rs2Value = 0x4fadf777,
+          imm = 0x162,
+          takeBranch = false
+        )
       }
       it("bge") {
-        cancel("Not yet implemented")
+        testBType(
+          funct3 = 5,
+          rs1 = 1,
+          rs1Value = 0x3f18402f,
+          rs2 = 4,
+          rs2Value = -0x5f292dce,
+          imm = 0x6a8,
+          takeBranch = true
+        )
+        testBType(
+          funct3 = 5,
+          rs1 = 4,
+          rs1Value = -0x6c409e00,
+          rs2 = 30,
+          rs2Value = 0x7572f2ef,
+          imm = 0x364,
+          takeBranch = false
+        )
       }
       it("bltu") {
-        cancel("Not yet implemented")
+        testBType(
+          funct3 = 6,
+          rs1 = 28,
+          rs1Value = 0xc881d8e2,
+          rs2 = 15,
+          rs2Value = 0xfbad6f5e,
+          imm = -0x3b8,
+          takeBranch = true
+        )
+        testBType(
+          funct3 = 6,
+          rs1 = 28,
+          rs1Value = 0xf85eb707,
+          rs2 = 1,
+          rs2Value = 0x97f574ad,
+          imm = -0x1b0,
+          takeBranch = false
+        )
       }
       it("bgeu") {
-        cancel("Not yet implemented")
+        testBType(
+          funct3 = 7,
+          rs1 = 7,
+          rs1Value = 0xcac58493,
+          rs2 = 19,
+          rs2Value = 0xbbaaac85,
+          imm = -0x4dc,
+          takeBranch = true
+        )
+        testBType(
+          funct3 = 7,
+          rs1 = 7,
+          rs1Value = 0x8530cd57,
+          rs2 = 19,
+          rs2Value = 0x90f720e9,
+          imm = 0x756,
+          takeBranch = false
+        )
       }
     }
     describe("skips environment instructions") {
