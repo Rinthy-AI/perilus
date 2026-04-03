@@ -109,6 +109,9 @@ class Perilus(
     is(ResultSrc.aluResult) {
       result := alu.io.aluResult
     }
+    is(ResultSrc.immExt) {
+      result := extendUnit.io.immExt
+    }
   }
 
   alu.io.aluControl := controlUnit.io.aluControl

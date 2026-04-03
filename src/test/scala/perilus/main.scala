@@ -289,11 +289,53 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
       }
     }
     describe("executes U-type RV32I instructions") {
+      def testUType(
+          imm: Int,
+          rd: Int,
+          op: Int
+      ) = {
+        val immMasked = (imm & 0xfffff000)
+        val rdShifted = (rd & 0x1f) << 7
+        val instr = immMasked | rdShifted | op
+
+        var registerFile = ArrayBuffer.fill(32)(0x00000000)
+        var memory = ArrayBuffer.fill(64)(0x00000000)
+        val test_pc = 48
+        memory(0) = 0x02000863 // beq x0, x0, 48
+        memory(test_pc / 4) = instr
+        val expected = if (op == 0x17) { immMasked + test_pc }
+        else { immMasked }
+
+        simulate(
+          new Perilus(
+            initRegs = initMemFile(registerFile),
+            initMem = initMemFile(memory),
+            withDebug = true
+          )
+        ) { perilus =>
+          {
+            val perilusDebug = perilus.io.debug.get
+            perilusDebug.memAddr.poke(test_pc)
+            perilusDebug.memData.expect(toULong(instr))
+            perilus.clock.step(6)
+            perilusDebug.reg.poke(rd)
+            perilusDebug.regData.expect(toULong(expected))
+          }
+        }
+      }
       it("auipc") {
-        cancel("Not yet implemented")
+        testUType(
+          imm = 0xf5540000,
+          rd = 29,
+          op = 0x17
+        )
       }
       it("lui") {
-        cancel("Not yet implemented")
+        testUType(
+          imm = 0xc6fed000,
+          rd = 21,
+          op = 0x37
+        )
       }
     }
     describe("executes S-type RV32I instructions") {

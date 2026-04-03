@@ -87,6 +87,10 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
         state := ControlUnitState.jalrLink
       }.elsewhen(io.op === Opcode.branch) {
         state := ControlUnitState.branch
+      }.elsewhen(io.op === Opcode.lui) {
+        state := ControlUnitState.lui
+      }.elsewhen(io.op === Opcode.auipc) {
+        state := ControlUnitState.auipc
       }.elsewhen(io.op === Opcode.env || io.op === Opcode.fence) {
         state := ControlUnitState.fetch
       }
@@ -169,13 +173,26 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
       branch := true.B
       state := ControlUnitState.fetch
     }
+    is(ControlUnitState.lui) {
+      io.resultSrc := ResultSrc.immExt
+      io.regWrite := true.B
+      state := ControlUnitState.fetch
+    }
+    is(ControlUnitState.auipc) {
+      io.resultSrc := ResultSrc.aluResult
+      io.aluSrcA := AluSrcA.oldPc
+      io.aluSrcB := AluSrcB.immExt
+      aluOp := AluOp.auipc
+      io.regWrite := true.B
+      state := ControlUnitState.fetch
+    }
   }
 
   io.pcWrite := ((branch && ((io.funct3 === 0.U && io.zero)
     || (io.funct3 === 1.U && !io.zero)
     || ((io.funct3 === 4.U || io.funct3 === 6.U) && io.lessThan)
     || ((io.funct3 === 5.U || io.funct3 === 7.U) && !io.lessThan)))
-  || pcUpdate)
+    || pcUpdate)
 
   aluDecoder.io.aluOp := aluOp
   aluDecoder.io.funct3 := io.funct3
@@ -201,6 +218,9 @@ class AluDecoder extends Module {
   io.aluControl := AluControl.add
 
   switch(io.aluOp) {
+    is(AluOp.auipc) {
+      io.aluControl := AluControl.add
+    }
     is(AluOp.memory) {
       io.aluControl := AluControl.add
     }
@@ -277,12 +297,18 @@ class InstructionDecoder extends Module {
     is(Opcode.jal) {
       io.immSrc := ImmSrc.jType
     }
+    is(Opcode.lui) {
+      io.immSrc := ImmSrc.uType
+    }
+    is(Opcode.auipc) {
+      io.immSrc := ImmSrc.uType
+    }
   }
 }
 
 object ControlUnitState extends ChiselEnum {
   val fetch, decode, memAdr, memRead, memWb, memWrite, executeR, aluWb, executeI, jal, jalrLink,
-      jalrJump, branch =
+      jalrJump, branch, lui, auipc =
     Value
 }
 

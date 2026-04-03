@@ -72,9 +72,9 @@ object AluSrcB extends ChiselEnum {
 }
 
 object AluOp extends ChiselEnum {
-  val memory, branch, arithmetic = Value
+  val memory, branch, arithmetic, auipc = Value
 }
 
 object ResultSrc extends ChiselEnum {
-  val aluOutBuf, readDataBuf, aluResult = Value
+  val aluOutBuf, readDataBuf, aluResult, immExt = Value
 }
