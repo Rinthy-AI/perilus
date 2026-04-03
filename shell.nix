@@ -13,6 +13,7 @@ pkgs.mkShellNoCC {
     llvm
     metals
     sbt
+    typst
     verilator
   ];
 }

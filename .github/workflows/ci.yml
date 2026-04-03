@@ -45,6 +45,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y verilator
 
+      - name: Install Typst
+        uses: typst-community/setup-typst@v5
+
       # Ensure sbt & scalafmt plugins are resolved (if needed)
       - name: sbt update
         run: sbt update
@@ -67,8 +70,18 @@ jobs:
           sbt run
           cd generated && zip ../perilus.zip ./*
 
+      - name: Compile system diagram to SVG
+        run: |
+          typst compile --format svg doc/perilus.typ doc/perilus.svg
+
       - name: Upload perilus.zip artifact
         uses: actions/upload-artifact@v4
         with:
           name: perilus
           path: perilus.zip
+
+      - name: Upload documentation SVG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: perilus-doc
+          path: doc/perilus.svg

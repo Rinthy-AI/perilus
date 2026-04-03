@@ -1,6 +1,7 @@
 *.S
 *.s
 *.sv
+*.svg
 *.v
 .bloop/
 .bsp/
