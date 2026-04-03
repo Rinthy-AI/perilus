@@ -29,7 +29,7 @@ class RegisterFile(width: Width, initRegs: String = "", withDebug: Boolean = fal
   io.rd1 := registerFile.read(io.a1)
   io.rd2 := registerFile.read(io.a2)
 
-  when(io.writeEnable3 && io.a3 =/= 0.U) {
+  when(io.writeEnable3 && io.a3 =/= 0.U && !reset.asBool) {
     registerFile.write(io.a3, io.writeData3)
   }
 }

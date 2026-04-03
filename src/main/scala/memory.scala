@@ -35,7 +35,7 @@ class Memory(
     d.memData := memory.read(d.memAddr >> AddressShift)
   })
 
-  when(io.writeEnable) {
+  when(io.writeEnable && !reset.asBool) {
     memory.write(io.address >> AddressShift, io.writeData & io.dataMask.asUInt)
   }
 
