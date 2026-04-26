@@ -49,6 +49,18 @@ class RegisterFileTests extends AnyFunSpec with ChiselSim {
         }
       }
     }
+    it("always reads zero on x0") {
+      simulate(
+        new RegisterFile(32.W, initMemFile(ArrayBuffer.fill(32)(0xffffffff)))
+      ) { registerFile =>
+        {
+          registerFile.io.a1.poke(0.U)
+          registerFile.io.rd1.expect(0.U)
+          registerFile.io.a2.poke(0.U)
+          registerFile.io.rd2.expect(0.U)
+        }
+      }
+    }
     it("doesn't write to x0") {
       simulate(
         new RegisterFile(32.W, initMemFile(ArrayBuffer.fill(32)(0x00000000)))

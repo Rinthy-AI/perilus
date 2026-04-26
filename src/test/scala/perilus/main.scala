@@ -60,7 +60,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             val perilusDebug = perilus.io.debug.get
 
             perilusDebug.memAddr.poke(0)
-            perilusDebug.memData.expect(toULong(instr))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(instr))
             perilusDebug.reg.poke(rs1)
             perilusDebug.regData.expect(toULong(rs1Value))
             perilusDebug.reg.poke(rd)
@@ -70,7 +70,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             perilus.io.pc.expect(toULong(pc))
 
             perilusDebug.memAddr.poke(0)
-            perilusDebug.memData.expect(toULong(instr))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(instr))
             perilusDebug.reg.poke(rs1)
             perilusDebug.regData.expect(if (rs1 == rd) toULong(expected) else toULong(rs1Value))
             perilusDebug.reg.poke(rd)
@@ -85,7 +85,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs1Value: Int,
           imm: Int,
           memData: Int,
-          dataMask: Int
+          expected: Int
       ): Unit = {
         val memAddr = rs1Value + imm
         var registerFile = ArrayBuffer.fill(32)(0x00000000)
@@ -109,71 +109,190 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             perilusDebug.reg.poke(rd)
             perilusDebug.regData.expect(if (rd == rs1) toULong(rs1Value) else 0)
             perilusDebug.memAddr.poke(memAddr)
-            perilusDebug.memData.expect(toULong(memData))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(memData))
 
             perilus.clock.step(5)
 
             perilusDebug.reg.poke(rd)
-            perilusDebug.regData.expect(toULong(memData & dataMask))
+            perilusDebug.regData.expect(toULong(expected))
             perilusDebug.memAddr.poke(memAddr)
-            perilusDebug.memData.expect(toULong(memData))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(memData))
           }
         }
       }
-      it("lb") {
-        testLoad(
-          funct3 = 0,
-          rd = 10,
-          rs1 = 10,
-          rs1Value = 0x14,
-          imm = -0x07,
-          memData = 0x5b9ccada,
-          dataMask = 0x000000ff
-        )
+      describe("lb") {
+        it("byte 0") {
+          testLoad(
+            funct3 = 0,
+            rd = 24,
+            rs1 = 17,
+            rs1Value = 0x17,
+            imm = 0x25,
+            memData = 0xcdcf5b13,
+            expected = 0x00000013
+          )
+        }
+        it("byte 1") {
+          testLoad(
+            funct3 = 0,
+            rd = 31,
+            rs1 = 11,
+            rs1Value = 0x13,
+            imm = -0xe,
+            memData = 0x9447969e,
+            expected = 0xffffff96
+          )
+        }
+        it("byte 2") {
+          testLoad(
+            funct3 = 0,
+            rd = 25,
+            rs1 = 2,
+            rs1Value = 0x12,
+            imm = 0x20,
+            memData = 0x9cd40f55,
+            expected = 0xffffffd4
+          )
+        }
+        it("byte 3") {
+          testLoad(
+            funct3 = 0,
+            rd = 10,
+            rs1 = 10,
+            rs1Value = 0x14,
+            imm = -0x05,
+            memData = 0x5b9ccada,
+            expected = 0x0000005b
+          )
+        }
       }
-      it("lh") {
-        testLoad(
-          funct3 = 1,
-          rd = 31,
-          rs1 = 14,
-          rs1Value = 0x0e,
-          imm = 0x14,
-          memData = 0x8b9d4da4,
-          dataMask = 0x0000ffff
-        )
+      describe("lh") {
+        it("lower") {
+          testLoad(
+            funct3 = 1,
+            rd = 31,
+            rs1 = 14,
+            rs1Value = 0x0c,
+            imm = 0x14,
+            memData = 0x8c501df9,
+            expected = 0x00001df9
+          )
+        }
+        it("upper") {
+          testLoad(
+            funct3 = 1,
+            rd = 15,
+            rs1 = 8,
+            rs1Value = 0x1f,
+            imm = 0x13,
+            memData = 0x8b9d4da4,
+            expected = 0xffff8b9d
+          )
+        }
+        it("unaligned (byte 1)") {
+          cancel("Not yet implemented")
+        }
+        it("unaligned (byte 3)") {
+          cancel("Not yet implemented")
+        }
       }
-      it("lw") {
-        testLoad(
-          funct3 = 2,
-          rd = 21,
-          rs1 = 11,
-          rs1Value = 0x30,
-          imm = 0xa8,
-          memData = 0x0f3f9400,
-          dataMask = 0xffffffff
-        )
+      describe("lw") {
+        it("aligned") {
+          testLoad(
+            funct3 = 2,
+            rd = 21,
+            rs1 = 11,
+            rs1Value = 0x30,
+            imm = 0xa8,
+            memData = 0x0f3f9400,
+            expected = 0x0f3f9400
+          )
+        }
+        it("unaligned (byte 1)") {
+          cancel("Not yet implemented")
+        }
+        it("unaligned (byte 2)") {
+          cancel("Not yet implemented")
+        }
+        it("unaligned (byte 3)") {
+          cancel("Not yet implemented")
+        }
       }
-      it("lbu") {
-        testLoad(
-          funct3 = 4,
-          rd = 7,
-          rs1 = 13,
-          rs1Value = 0x3b,
-          imm = 0x07,
-          memData = 0x55c9a074,
-          dataMask = 0x000000ff
-        )
+      describe("lbu") {
+        it("byte 0") {
+          testLoad(
+            funct3 = 4,
+            rd = 19,
+            rs1 = 25,
+            rs1Value = 0x1d,
+            imm = 0x07,
+            memData = 0xb240f499,
+            expected = 0x00000099
+          )
+        }
+        it("byte 1") {
+          testLoad(
+            funct3 = 4,
+            rd = 1,
+            rs1 = 29,
+            rs1Value = 0x12,
+            imm = -0x9,
+            memData = 0xaad61de7,
+            expected = 0x0000001d
+          )
+        }
+        it("byte 2") {
+          testLoad(
+            funct3 = 4,
+            rd = 7,
+            rs1 = 13,
+            rs1Value = 0x3b,
+            imm = 0x7,
+            memData = 0x55c9a074,
+            expected = 0x000000c9
+          )
+        }
+        it("byte 3") {
+          testLoad(
+            funct3 = 4,
+            rd = 23,
+            rs1 = 18,
+            rs1Value = 0x12,
+            imm = 0x19,
+            memData = 0xd39dd395,
+            expected = 0x000000d3
+          )
+        }
       }
-      it("lhu") {
-        testLoad(
-          funct3 = 5,
-          rd = 20,
-          rs1 = 4,
-          rs1Value = 0x25,
-          imm = 0x2f,
-          memData = 0xb3fecaab,
-          dataMask = 0x0000ffff
-        )
+      describe("lhu") {
+        it("lower") {
+          testLoad(
+            funct3 = 5,
+            rd = 20,
+            rs1 = 4,
+            rs1Value = 0x25,
+            imm = 0x2f,
+            memData = 0xb3fecaab,
+            expected = 0x0000caab
+          )
+        }
+        it("upper") {
+          testLoad(
+            funct3 = 5,
+            rd = 16,
+            rs1 = 25,
+            rs1Value = 0x14,
+            imm = 0x6,
+            memData = 0x92b494c8,
+            expected = 0x000092b4
+          )
+        }
+        it("unaligned (byte 1)") {
+          cancel("Not yet implemented")
+        }
+        it("unaligned (byte 3)") {
+          cancel("Not yet implemented")
+        }
       }
       it("addi") {
         testIType(
@@ -316,7 +435,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           {
             val perilusDebug = perilus.io.debug.get
             perilusDebug.memAddr.poke(test_pc)
-            perilusDebug.memData.expect(toULong(instr))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(instr))
             perilus.clock.step(6)
             perilusDebug.reg.poke(rd)
             perilusDebug.regData.expect(toULong(expected))
@@ -346,7 +465,8 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs2: Int,
           rs2Value: Int,
           imm: Int,
-          dataMask: Int
+          memData: Int,
+          expected: Int
       ): Unit = {
         val immUpper = (imm & 0xfe0) << 20
         val rs2Shifted = (rs2 & 0x1f) << 20
@@ -362,6 +482,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
         var memory = ArrayBuffer.fill(64)(0x00000000)
         memory(0) = instr
         val memAddr = rs1Value + imm
+        memory(memAddr / 4) = memData
 
         simulate(
           new Perilus(
@@ -378,47 +499,119 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             perilusDebug.reg.poke(rs2)
             perilusDebug.regData.expect(toULong(rs2Value))
             perilusDebug.memAddr.poke(memAddr)
-            assert(perilusDebug.memData.peek().litValue != toULong(rs2Value & dataMask))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(memData))
 
             perilus.clock.step(4)
 
             perilusDebug.memAddr.poke(memAddr)
-            perilusDebug.memData.expect(toULong(rs2Value & dataMask))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(expected))
           }
         }
       }
-      it("sb") {
-        testSType(
-          funct3 = 0,
-          rs1 = 17,
-          rs1Value = 0x1c,
-          rs2 = 21,
-          rs2Value = 0x52ba341a,
-          imm = -0x18,
-          dataMask = 0x000000ff
-        )
+      describe("sb") {
+        it("byte 0") {
+          testSType(
+            funct3 = 0,
+            rs1 = 17,
+            rs1Value = 0x1c,
+            rs2 = 21,
+            rs2Value = 0x52ba341a,
+            imm = -0x18,
+            memData = 0x92de8d7b,
+            expected = 0x92de8d1a
+          )
+        }
+        it("byte 1") {
+          testSType(
+            funct3 = 0,
+            rs1 = 23,
+            rs1Value = 0x1e,
+            rs2 = 25,
+            rs2Value = 0xd3ceccf2,
+            imm = -0x9,
+            memData = 0x9c912a5e,
+            expected = 0x9c91f25e
+          )
+        }
+        it("byte 2") {
+          testSType(
+            funct3 = 0,
+            rs1 = 12,
+            rs1Value = 0x24,
+            rs2 = 13,
+            rs2Value = 0x52ba341a,
+            imm = -0x12,
+            memData = 0x92de8d7b,
+            expected = 0x921a8d7b
+          )
+        }
+        it("byte 3") {
+          testSType(
+            funct3 = 0,
+            rs1 = 4,
+            rs1Value = 0x16,
+            rs2 = 17,
+            rs2Value = 0xa456c21f,
+            imm = -0x3,
+            memData = 0xd3a77bd8,
+            expected = 0x1fa77bd8
+          )
+        }
       }
-      it("sh") {
-        testSType(
-          funct3 = 1,
-          rs1 = 4,
-          rs1Value = 0x21,
-          rs2 = 6,
-          rs2Value = 0x02d3b5bd,
-          imm = -0x9,
-          dataMask = 0x0000ffff
-        )
+      describe("sh") {
+        it("lower") {
+          testSType(
+            funct3 = 1,
+            rs1 = 4,
+            rs1Value = 0x21,
+            rs2 = 6,
+            rs2Value = 0x02d3b5bd,
+            imm = 0xb,
+            memData = 0xf511e1c4,
+            expected = 0xf511b5bd
+          )
+        }
+        it("upper") {
+          testSType(
+            funct3 = 1,
+            rs1 = 12,
+            rs1Value = 0x1e,
+            rs2 = 31,
+            rs2Value = 0xba1a82e4,
+            imm = 0x8,
+            memData = 0xb79581b6,
+            expected = 0x82e481b6
+          )
+        }
+        it("unaligned (byte 1)") {
+          cancel("Not yet implemented")
+        }
+        it("unaligned (byte 3)") {
+          cancel("Not yet implemented")
+        }
       }
-      it("sw") {
-        testSType(
-          funct3 = 2,
-          rs1 = 9,
-          rs1Value = 0x38,
-          rs2 = 6,
-          rs2Value = 0x01830169,
-          imm = -0x4,
-          dataMask = 0xffffffff
-        )
+      describe("sw") {
+        it("aligned") {
+          testSType(
+            funct3 = 2,
+            rs1 = 9,
+            rs1Value = 0x38,
+            rs2 = 6,
+            rs2Value = 0x01830169,
+            imm = -0x4,
+            memData = 0xbf8cde8b,
+            expected = 0x01830169
+          )
+        }
+        it("unaligned (byte 1)") {
+          cancel("Not yet implemented")
+        }
+        it("unaligned (byte 2)") {
+          cancel("Not yet implemented")
+        }
+        it("unaligned (byte 3)") {
+          cancel("Not yet implemented")
+        }
       }
     }
     describe("executes R-type RV32I instructions") {
@@ -459,7 +652,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             val perilusDebug = perilus.io.debug.get
 
             perilusDebug.memAddr.poke(0)
-            perilusDebug.memData.expect(toULong(instr))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(instr))
             perilusDebug.reg.poke(rs1)
             perilusDebug.regData.expect(toULong(rs1Value))
             perilusDebug.reg.poke(rs2)
@@ -473,7 +666,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             perilus.io.pc.expect(4)
 
             perilusDebug.memAddr.poke(0)
-            perilusDebug.memData.expect(toULong(instr))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(instr))
             perilusDebug.reg.poke(rs1)
             perilusDebug.regData.expect(if (rd == rs1) toULong(expected) else toULong(rs1Value))
             perilusDebug.reg.poke(rs2)
@@ -639,7 +832,7 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
             val perilusDebug = perilus.io.debug.get
 
             perilusDebug.memAddr.poke(0)
-            perilusDebug.memData.expect(toULong(instr))
+            assert(perilusDebug.memData.peek().asUInt.litValue.toLong == toULong(instr))
             perilusDebug.reg.poke(rs1)
             perilusDebug.regData.expect(toULong(rs1Value))
             perilusDebug.reg.poke(rs2)

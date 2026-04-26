@@ -38,7 +38,7 @@ class Perilus(
         val reg = Input(UInt(5.W))
         val regData = Output(UInt(width))
         val memAddr = Input(UInt(width))
-        val memData = Output(UInt(width))
+        val memData = Output(Vec(width.get / 8, UInt(8.W)))
         val state = Output(ControlUnitState())
       })
       else None
@@ -158,6 +158,7 @@ class Perilus(
   io.memory.io.writeData := rd2Buf
   io.memory.io.writeEnable := controlUnit.io.memWrite
   io.memory.io.dataMask := controlUnit.io.dataMask
+  io.memory.io.signExtData := controlUnit.io.signExtData
 
   io.registerFile.io.a1 := instr(19, 15)
   io.registerFile.io.a2 := instr(24, 20)

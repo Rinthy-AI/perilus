@@ -25,7 +25,7 @@ class MemoryTests extends AnyFunSpec with ChiselSim {
             memory.io.address.poke(addr1)
             memory.io.writeData.poke(data1)
             memory.io.writeEnable.poke(true.B)
-            memory.io.dataMask.poke(dataMask)
+            memory.io.dataMask.poke(DataMask.word)
             memory.io.readData.expect(0.U)
             memory.clock.step(1)
             memory.io.readData.expect(data1)

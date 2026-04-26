@@ -14,7 +14,7 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
     val funct3 = Input(UInt(3.W))
     val funct7_5 = Input(Bool())
     val zero, lessThan = Input(Bool())
-    val adrSrc, irWrite, memWrite, pcWrite, regWrite = Output(Bool())
+    val adrSrc, irWrite, memWrite, pcWrite, regWrite, signExtData = Output(Bool())
     val aluSrcA = Output(AluSrcA())
     val aluSrcB = Output(AluSrcB())
     val resultSrc = Output(ResultSrc())
@@ -57,6 +57,12 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
     }
   }.otherwise {
     io.dataMask := DataMask.word
+  }
+
+  when(io.op === Opcode.load && (io.funct3 === 0.U || io.funct3 === 1.U)) {
+    io.signExtData := true.B
+  }.otherwise {
+    io.signExtData := false.B
   }
 
   // Main FSM (Figure 7.45, page 436)
