@@ -1,7 +1,8 @@
 # `perilus`
 
-A [RISC-V RV32I] processor written with [Chisel] as a learning exercise. Basically a copy of the
-multi-cycle processor from [Harris and Harris].
+A [RISC-V RV32I] processor written with [Chisel] as a learning exercise. Basically the same design
+as the multi-cycle processor from [Harris and Harris], but extended to cover the entire base
+instruction set.
 
 [RISC-V RV32I]: https://docs.riscv.org/reference/isa/unpriv/rv32.html
 [Chisel]: https://www.chisel-lang.org/docs
@@ -9,20 +10,22 @@ multi-cycle processor from [Harris and Harris].
 
 ## Usage
 
-> [!NOTE]
-> The processor doesn't work yet, but some of the parts do.
-
 1. Install dependencies[^nix]
     - [Scala 2] (**not 3** because Chisel isn't compatible with it)
-    - [`sbt`][sbt]
+    - [`sbt`]
     - [Verilator]
-    - [`just`][just]
-1. `just test`
+    - [`just`]
+    - [Rust]
+1. `just test chisel verilate simulate`
 
 [Scala 2]: https://www.scala-lang.org/download/all.html
-[sbt]: https://www.scala-sbt.org/
+[`sbt`]: https://www.scala-sbt.org/
 [Verilator]: https://verilator.org/guide/latest/overview.html
-[just]: https://github.com/casey/just
+[`just`]: https://github.com/casey/just
+[Rust]: https://rustup.rs/
+
+The controls for the standalone simulator aren't documented yet, but the source code makes them at
+least mildly clear. `vim` users will feel somewhat at home.
 
 [^nix]: If you use the `nix` package manager, you can use the `shell.nix` file in the project root
     with `nix-shell`.
