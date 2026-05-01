@@ -14,7 +14,7 @@ chisel:
     sbt run
 
 verilate:
-    verilator --build --Mdir verilated --cc \
+    verilator --build --public-flat-rw --Mdir verilated --cc \
         generated/Perilus.sv \
         generated/Memory.sv \
         generated/RegisterFile.sv \
