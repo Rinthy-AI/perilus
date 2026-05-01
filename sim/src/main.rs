@@ -45,6 +45,8 @@ struct App {
     show_register_aliases: bool,
     register_cursor: Register,
     memory_cursor: MemoryIndex,
+    memory_top: MemoryIndex,
+    memory_bottom: MemoryIndex,
     mode: Mode,
     run_state: RunState,
     exit: bool,
@@ -59,6 +61,8 @@ impl App {
             show_register_aliases: true,
             register_cursor: Register::const_new::<0>(),
             memory_cursor: MemoryIndex::const_new::<0>(),
+            memory_top: MemoryIndex::const_new::<0>(),
+            memory_bottom: MemoryIndex::const_new::<0>(),
             mode: Mode::Normal,
             run_state: RunState::Idle,
             exit: false,
@@ -66,6 +70,19 @@ impl App {
     }
     fn run(&mut self, terminal: &mut DefaultTerminal) -> std::io::Result<()> {
         while !self.exit {
+            let num_visible_memory_words = (terminal.get_frame().area().height - 9) * 8;
+            self.memory_bottom = self.memory_top + num_visible_memory_words as u32;
+            if self.memory_cursor <= self.memory_top {
+                self.memory_top = self.memory_cursor;
+                self.memory_bottom = self.memory_top + num_visible_memory_words as u32;
+            } else if self.memory_cursor >= self.memory_bottom {
+                self.memory_bottom = self.memory_cursor + 8;
+                self.memory_top = self
+                    .memory_bottom
+                    .saturating_sub(num_visible_memory_words as u32);
+            }
+            self.memory_top -= self.memory_top % 8;
+            self.memory_bottom -= self.memory_bottom % 8;
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events(self.run_state != RunState::Idle)?;
             self.run_state = match self.run_state {
@@ -259,6 +276,11 @@ impl App {
                 Mode::EditRegister => self.perilus.set_register(self.register_cursor, 0),
                 Mode::EditMemory => self.perilus.set_memory(self.memory_cursor.get(), 0),
             },
+            KeyCode::Char('J') => {
+                if let Mode::EditMemory = self.mode {
+                    self.perilus.set_pc(self.memory_cursor.get() * 4);
+                }
+            }
             _ => (),
         }
     }
@@ -321,8 +343,8 @@ impl Widget for &App {
                 .render(reg_area, buf);
         }
         let memory = self.perilus.get_memory();
-        for offset in 0..256 {
-            let row = offset / 8 + 9;
+        for offset in self.memory_top.get() as u16..self.memory_bottom.get() as u16 {
+            let row = (offset - self.memory_top.get() as u16) / 8 + 9;
             if offset % 8 == 0 {
                 let label_area = Rect::new(0, row, 8, 1);
                 Paragraph::new(format!("{:08x}", offset * 4)).render(label_area, buf);
@@ -335,7 +357,11 @@ impl Widget for &App {
             if let Mode::EditMemory = self.mode
                 && self.memory_cursor.get() == offset as u32
             {
-                mem_style = mem_style.fg(Color::Black).bg(Color::White);
+                if self.memory_cursor.get() * 4 == self.current_pc {
+                    mem_style = mem_style.fg(Color::White).bg(Color::Green);
+                } else {
+                    mem_style = mem_style.fg(Color::Black).bg(Color::White);
+                }
             }
             Paragraph::new(format!("{:08x}", memory[offset as usize]))
                 .style(mem_style)
