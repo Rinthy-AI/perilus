@@ -70,13 +70,18 @@ impl App {
     }
     fn run(&mut self, terminal: &mut DefaultTerminal) -> std::io::Result<()> {
         while !self.exit {
-            let num_visible_memory_words = (terminal.get_frame().area().height - 9) * 8;
+            let num_visible_memory_words = terminal
+                .get_frame()
+                .area()
+                .height
+                .saturating_sub(9)
+                .saturating_mul(8);
             self.memory_bottom = self.memory_top + num_visible_memory_words as u32;
             if self.memory_cursor <= self.memory_top {
                 self.memory_top = self.memory_cursor;
                 self.memory_bottom = self.memory_top + num_visible_memory_words as u32;
             } else if self.memory_cursor >= self.memory_bottom {
-                self.memory_bottom = self.memory_cursor + 8;
+                self.memory_bottom = self.memory_cursor.saturating_add(8);
                 self.memory_top = self
                     .memory_bottom
                     .saturating_sub(num_visible_memory_words as u32);
@@ -101,7 +106,7 @@ impl App {
                 }
                 RunState::RunTo { index } => {
                     if let Mode::EditMemory = self.mode
-                        && self.current_pc != index * 4
+                        && self.current_pc != index.saturating_mul(4)
                     {
                         self.perilus.pulse_clock();
                         RunState::RunTo { index }
@@ -197,13 +202,12 @@ impl App {
                 }
                 Mode::EditRegister => {
                     if self.register_cursor % 8 != 7 {
-                        self.register_cursor =
-                            (self.register_cursor + 1).min(Register::const_new::<31>());
+                        self.register_cursor = self.register_cursor.saturating_add(1);
                     }
                 }
                 Mode::EditMemory => {
                     if self.memory_cursor <= 1016 {
-                        self.memory_cursor += 8;
+                        self.memory_cursor = self.memory_cursor.saturating_add(8);
                     }
                 }
             },
