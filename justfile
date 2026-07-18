@@ -1,7 +1,16 @@
 ci: fmt clean test doc
 
-test:
+test: test-chisel test-official
+
+test-chisel:
     sbt test
+
+test-official:
+    cd riscv-arch-test && \
+        CONFIG_FILES=../tests/perilus/test_config.yaml \
+        WORKDIR=../tests \
+        make --jobs $(nproc)
+    # TODO run the tests in the simulator
 
 doc:
     typst compile -f svg doc/perilus.typ
@@ -33,3 +42,5 @@ clean:
     sbt clean
     rm -rf build generated verilated
     cd sim && cargo clean
+    rm -rf tests/perilus-rv32i tests/stamps
+    cd riscv-arch-test && make clean

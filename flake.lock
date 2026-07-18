@@ -2,7 +2,8 @@
   "nodes": {
     "root": {
       "inputs": {
-        "stable-pkgs": "stable-pkgs"
+        "stable-pkgs": "stable-pkgs",
+        "unstable-pkgs": "unstable-pkgs"
       }
     },
     "stable-pkgs": {
@@ -17,6 +18,22 @@
       "original": {
         "owner": "nixos",
         "ref": "nixos-26.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "unstable-pkgs": {
+      "locked": {
+        "lastModified": 1784007870,
+        "narHash": "sha256-djcLt/JJphyNt4eDY9XTly+/WbCK5lqWq9lSgCmJkkQ=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "18b9261cb3294b6d2a06d03f96872827b8fe2698",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }

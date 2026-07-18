@@ -1,0 +1,8 @@
+name: perilus-rv32i
+compiler_exe: riscv64-none-elf-gcc
+objdump_exe: riscv64-none-elf-objdump
+ref_model_exe: sail_riscv_sim
+udb_config: perilus.yaml
+linker_script: link.ld
+dut_include_dir: .
+include_priv_tests: false

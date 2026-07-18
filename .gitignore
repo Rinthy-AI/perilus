@@ -13,4 +13,6 @@ project/metals.sbt
 project/project/
 project/target/
 target/
+tests/perilus-rv32i
+tests/stamps
 verilated/
