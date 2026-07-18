@@ -1,4 +1,4 @@
-use std::{error::Error, process::Command};
+use std::{env, error::Error, process::Command};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let verilator_command_output = Command::new("verilator")
@@ -14,6 +14,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             return Err(format!("Failed to parse Verilator command output as UTF-8: {e}").into());
         }
     };
+
+    unsafe {
+        env::set_var("CC", "gcc");
+        env::set_var("CXX", "g++");
+    }
 
     cc::Build::new()
         .cpp(true)
