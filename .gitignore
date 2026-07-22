@@ -9,6 +9,7 @@
 .scala-build/
 build/
 filelist.f
+generated/
 project/metals.sbt
 project/project/
 project/target/
