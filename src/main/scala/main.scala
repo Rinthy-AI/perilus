@@ -27,7 +27,7 @@ class Perilus(
   val width = 32.W
   val memorySizeWords = if (initMem.nonEmpty) {
     Source.fromFile(initMem).getLines().size
-  } else { 1024 }
+  } else { 1048576 }
 
   val io = IO(new Bundle {
     val memory = Module(new Memory(memorySizeWords, width, initMem, withDebug))
