@@ -1,5 +1,5 @@
 use bounded_integer::BoundedU32;
-use std::slice;
+use std::{io, path::PathBuf, slice};
 
 unsafe extern "C" {
     fn perilus_init();
@@ -18,13 +18,13 @@ unsafe extern "C" {
 }
 
 pub(crate) type Register = BoundedU32<0, 31>;
-pub(crate) type MemoryIndex = BoundedU32<0, 1024>;
+pub(crate) type MemoryIndex = BoundedU32<0, { Perilus::MEMORY_SIZE_WORDS as u32 }>;
 
 pub(crate) struct Perilus;
 
 impl Perilus {
     const NUM_REGISTERS: usize = 32;
-    const MEMORY_SIZE_WORDS: usize = 1024;
+    const MEMORY_SIZE_WORDS: usize = 1_048_576;
 
     pub(crate) fn init() -> Perilus {
         unsafe { perilus_init() };
@@ -67,6 +67,24 @@ impl Perilus {
     }
     pub(crate) fn set_memory(&self, address: u32, value: u32) {
         unsafe { perilus_set_memory(address, value) };
+    }
+    pub(crate) fn load_file(&self, file: PathBuf) -> io::Result<()> {
+        let bytes = std::fs::read(file)?;
+        if bytes.len() > Self::MEMORY_SIZE_WORDS * 4 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Provided file is too large to fit in simulated memory",
+            ));
+        }
+        for (address_bytes, value) in bytes.iter().enumerate() {
+            let address_words = address_bytes / 4;
+            let shift = (address_bytes % 4) * 8;
+            let current = self.get_memory()[address_words];
+            let mask = !(0xffu32 << shift);
+            let new = (current & mask) | ((*value as u32) << shift);
+            self.set_memory(address_words as u32, new);
+        }
+        Ok(())
     }
 }
 

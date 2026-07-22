@@ -1,5 +1,6 @@
-use std::{fmt::Display, time::Duration};
+use std::{error::Error, fmt::Display, path::PathBuf, time::Duration};
 
+use clap::{Parser, Subcommand};
 use crossterm::event::{self, Event, KeyCode, KeyEvent};
 use ratatui::{
     DefaultTerminal, Frame,
@@ -12,6 +13,23 @@ use ratatui::{
 use crate::perilus::{MemoryIndex, Perilus, Register};
 
 mod perilus;
+
+#[derive(Parser)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    Interactive {
+        /// File to load verbatim into memory starting at 0x0
+        file: Option<PathBuf>,
+    },
+    Test {
+        file: PathBuf,
+    },
+}
 
 enum Mode {
     Normal,
@@ -389,12 +407,63 @@ impl Widget for &App {
     }
 }
 
-fn main() -> color_eyre::Result<()> {
-    let perilus = Perilus::init();
-    let mut app = App::new(perilus);
-
+fn run_interactive(mut app: App) -> color_eyre::Result<()> {
     color_eyre::install()?;
     ratatui::run(|terminal| app.run(terminal))?;
-
     Ok(())
+}
+
+const EBREAK_INSTRUCTION: u32 = 0x00100073;
+const TEST_MAX_CYCLES: u32 = 1_000_000;
+const TEST_PASS_VALUE: u32 = 0xebbb3689;
+const TEST_FAIL_VALUE: u32 = 0xd02a545a;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::parse();
+    let perilus = Perilus::init();
+
+    match cli.command {
+        Some(Command::Interactive { file }) => {
+            if let Some(file) = file {
+                perilus.load_file(file)?;
+            }
+            let app = App::new(perilus);
+            run_interactive(app).map_err(|e| -> Box<dyn Error> { e.to_string().into() })?;
+            Ok(())
+        }
+        Some(Command::Test { file }) => {
+            perilus.load_file(file)?;
+            let mut cycles = 0;
+            loop {
+                perilus.pulse_clock();
+                cycles += 1;
+                if cycles > TEST_MAX_CYCLES {
+                    return Err("Test execution hit maximum cycle count limit".into());
+                }
+                if perilus.get_control_unit_state() == 0 {
+                    let pc = perilus.get_pc();
+                    let instr = perilus.get_memory().get((pc / 4) as usize);
+                    if instr.is_none() {
+                        return Err(format!(
+                            "Program counter diverged to an address outside memory: 0x{pc:08x}"
+                        )
+                        .into());
+                    }
+                    if let Some(&EBREAK_INSTRUCTION) = instr {
+                        let result = perilus.get_registers()[1];
+                        match result {
+                            TEST_PASS_VALUE => return Ok(()),
+                            TEST_FAIL_VALUE => return Err("Test failed".into()),
+                            v => return Err(format!("Got unexpected test result 0x{v:08x}").into()),
+                        }
+                    }
+                }
+            }
+        }
+        None => {
+            let app = App::new(perilus);
+            run_interactive(app).map_err(|e| -> Box<dyn Error> { e.to_string().into() })?;
+            Ok(())
+        }
+    }
 }
