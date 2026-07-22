@@ -1,27 +1,15 @@
 #ifndef _RVMODEL_MACROS_H
 #define _RVMODEL_MACROS_H
 
-#define RVMODEL_DATA_SECTION \
-        .pushsection .tohost,"aw",@progbits;                \
-        .balign 8; .global tohost; tohost: .word 0;         \
-        .balign 8; .global fromhost; fromhost: .word 0;     \
-        .popsection
+#define RVMODEL_DATA_SECTION
 
-#define RVMODEL_HALT_PASS  \
-  li x1, 1;                \
-  la t0, tohost;           \
-  write_tohost_pass:       \
-    sw x1, 0(t0);          \
-    sw x0, 4(t0);          \
-    j write_tohost_pass;    \
+#define RVMODEL_HALT_PASS \
+  li x1, 0xebbb3689;      \
+  ebreak;
 
 #define RVMODEL_HALT_FAIL \
-  li x1, 3;                \
-  la t0, tohost;           \
-  write_tohost_fail:       \
-    sw x1, 0(t0);          \
-    sw x0, 4(t0);          \
-    j write_tohost_fail;    \
+  li x1, 0xd02a545a;      \
+  ebreak;
 
 #define RVMODEL_IO_WRITE_STR(_R1, _R2, _R3, _STR_PTR)
 
