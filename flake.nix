@@ -31,6 +31,7 @@
           act
           bundler
           cargo
+          clippy
           coursier
           gcc
           git
