@@ -1,14 +1,14 @@
-[package]
-name = "sim"
+[workspace]
+resolver = "3"
+members = ["core", "cli", "gui"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 
-[build-dependencies]
-cc = "1.2.60"
-
-[dependencies]
+[workspace.dependencies]
 bounded-integer = "0.6.1"
 clap = { version = "4.6.2", features = ["derive"] }
-color-eyre = "0.6.5"
-crossterm = "0.29.0"
-ratatui = "0.30.0"
+eframe = "0.36.2"
+egui = "0.36.2"
+rfd = "0.17.2"

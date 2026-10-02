@@ -1,0 +1,10 @@
+[package]
+name = "sim-gui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+perilus-core = { path = "../core" }
+eframe.workspace = true
+egui.workspace = true
+rfd.workspace = true

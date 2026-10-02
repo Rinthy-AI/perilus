@@ -1,0 +1,12 @@
+[package]
+name = "sim-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "sim"
+path = "src/main.rs"
+
+[dependencies]
+perilus-core = { path = "../core" }
+clap.workspace = true

@@ -15,7 +15,7 @@ for test_stem in $test_stems
 do
     echo -en "$test_stem:\t"
     riscv64-none-elf-objcopy -O binary "$test_dir/$test_stem.elf" "$tmp_dir/$test_stem.bin"
-    if cd "$script_dir/../sim" && cargo run --release -q -- test "$tmp_dir/$test_stem.bin"
+    if cd "$script_dir/../sim" && cargo run --release -q -p sim-cli -- test "$tmp_dir/$test_stem.bin"
     then
         echo -e "PASS"
     else

@@ -1,4 +1,4 @@
-use std::{env, error::Error, process::Command};
+use std::{env, error::Error, path::PathBuf, process::Command};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let verilator_command_output = Command::new("verilator")
@@ -15,6 +15,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+    let verilated_dir = manifest_dir.join("../../verilated");
+
     unsafe {
         env::set_var("CC", "gcc");
         env::set_var("CXX", "g++");
@@ -24,19 +27,25 @@ fn main() -> Result<(), Box<dyn Error>> {
         .cpp(true)
         .include(format!("{verilator_root}/include"))
         .include(format!("{verilator_root}/include/vltstd"))
-        .include("../verilated")
+        .include(&verilated_dir)
         .warnings(false)
         .file("src/wrapper.cpp")
         .compile("wrapper");
 
-    println!("cargo:rustc-link-search=native=../verilated");
+    println!("cargo:rustc-link-search=native={}", verilated_dir.display());
     println!("cargo:rustc-link-lib=static=VPerilus");
     println!("cargo:rustc-link-lib=static=verilated");
     println!("cargo:rustc-link-lib=dylib=stdc++");
 
     println!("cargo::rerun-if-changed=./src/wrapper.cpp");
-    println!("cargo::rerun-if-changed=../verilated/libverilated.a");
-    println!("cargo::rerun-if-changed=../verilated/libVPerilus.a");
+    println!(
+        "cargo::rerun-if-changed={}",
+        verilated_dir.join("libverilated.a").display()
+    );
+    println!(
+        "cargo::rerun-if-changed={}",
+        verilated_dir.join("libVPerilus.a").display()
+    );
 
     Ok(())
 }

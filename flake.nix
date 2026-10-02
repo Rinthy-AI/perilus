@@ -22,6 +22,14 @@
       };
       libInputs = with stable; [
         stdenv.cc.cc.lib
+        libGL
+        libxkbcommon
+        wayland
+        libx11
+        libxcursor
+        libxrandr
+        libxi
+        libxcb
       ];
       lib-path = with stable; lib.makeLibraryPath libInputs;
     in
@@ -52,6 +60,7 @@
           unstable.sail-riscv
           uv
           verilator
+          zenity
         ];
 
         shellHook = ''

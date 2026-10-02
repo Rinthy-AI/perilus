@@ -17,7 +17,7 @@ doc:
 
 fmt:
     sbt scalafmtAll
-    cd sim && cargo fmt && cargo clippy
+    cd sim && cargo fmt --all && cargo clippy --workspace --all-targets
 
 [script]
 [arg("force", long="force", value="1")]
@@ -50,10 +50,10 @@ verilate force='':
     fi
 
 build-sim: chisel verilate
-    cd sim && cargo build --release
+    cd sim && cargo build --release -p sim-cli
 
 simulate: chisel verilate
-    cd sim && cargo run --release
+    cd sim && cargo run --release -p sim-gui
 
 clean:
     sbt clean
