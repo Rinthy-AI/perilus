@@ -243,7 +243,9 @@ class AluDecoder extends Module {
     }
     is(AluOp.arithmetic) {
       when(
-        io.funct3 === "b000".U && (!io.op.asUInt(5) || (io.op.asUInt(5) && !io.funct7_5))
+        io.funct3 === "b000".U && (io.op === Opcode.jalr || !io.op.asUInt(5) || (io.op.asUInt(
+          5
+        ) && !io.funct7_5))
       ) {
         io.aluControl := AluControl.add
       }.elsewhen(io.funct3 === "b000".U && io.op.asUInt(5) && io.funct7_5) {
