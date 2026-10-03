@@ -71,7 +71,8 @@ class Perilus(
   val pc = RegInit(0.U(width))
   val pcNext = WireDefault(UInt(width), 0.U)
   when(controlUnit.io.pcWrite) {
-    pc := pcNext
+    // Mask LSB
+    pc := pcNext & ~1.U(width)
   }
 
   io.pc := pc
