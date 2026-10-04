@@ -44,7 +44,6 @@
           gcc
           git
           gnumake
-          gtkwave
           jdk21
           just
           llvm
@@ -56,6 +55,7 @@
           rustc
           rustfmt
           sbt
+          surfer
           typst
           unstable.sail-riscv
           uv
