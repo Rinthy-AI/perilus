@@ -1,8 +1,10 @@
 #include <VPerilus.h>
 #include <VPerilus___024root.h>
 #include <verilated.h>
+#include <verilated_vcd_c.h>
 
 static VerilatedContext* ctx = nullptr;
+static VerilatedVcdC* vcd = nullptr;
 static VPerilus* perilus = nullptr;
 
 extern "C" {
@@ -17,16 +19,36 @@ extern "C" {
     }
     void perilus_eval() {
         perilus->eval();
+        if (vcd != nullptr) {
+            vcd->dump(ctx->time());
+        }
     }
     void perilus_drop() {
         perilus->final();
+        if (vcd != nullptr) {
+            vcd->close();
+        }
         delete perilus;
         delete ctx;
+        delete vcd;
         perilus = nullptr;
         ctx = nullptr;
+        vcd = nullptr;
     }
     void perilus_increment_time() {
         ctx->timeInc(1);
+    }
+    void start_vcd(const char* filename) {
+        Verilated::traceEverOn(true);
+        vcd = new VerilatedVcdC;
+        perilus->trace(vcd, 99);
+        vcd->open(filename);
+    }
+    void stop_vcd() {
+        if (vcd != nullptr) {
+            vcd->close();
+        }
+        vcd = nullptr;
     }
 
     // clock

@@ -1,5 +1,6 @@
 use std::ops::Range;
-use std::time::{Duration, Instant};
+use std::path::PathBuf;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use eframe::egui;
 use egui::{Color32, FontId, Key, Modifiers};
@@ -84,6 +85,7 @@ struct Actions {
     up: bool,
     down: bool,
     backspace: bool,
+    trace: bool,
     nibble: Option<u8>,
 }
 
@@ -107,6 +109,8 @@ pub(crate) struct SimApp {
     pub(crate) scroll_to_row: Option<usize>,
     pub(crate) mem_viewport: Range<usize>,
     pub(crate) status: String,
+    pub(crate) tracing: bool,
+    pub(crate) trace_file: PathBuf,
     run_cycles: u64,
 }
 
@@ -132,6 +136,8 @@ impl SimApp {
             scroll_to_row: None,
             mem_viewport: 0..0,
             status: "Ready".into(),
+            tracing: false,
+            trace_file: PathBuf::new(),
             run_cycles: 0,
         }
     }
@@ -197,6 +203,31 @@ impl SimApp {
         self.follow_pc = !self.follow_pc;
         self.follow_pc_last = self.current_pc;
         self.status = format!("Follow PC {}", if self.follow_pc { "on" } else { "off" });
+    }
+
+    pub(crate) fn toggle_trace(&mut self) {
+        if self.tracing {
+            self.perilus.stop_trace();
+            self.status = format!("Closed trace file {}", self.trace_file.display());
+            self.tracing = false;
+        } else {
+            let timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let iso = chrono_lite(timestamp);
+            let trace_file = std::env::temp_dir().join(format!("perilus-{iso}.vcd"));
+            match self.perilus.start_trace(trace_file.clone()) {
+                Ok(()) => {
+                    self.status = format!("Opened trace file {}", trace_file.display());
+                    self.tracing = true;
+                    self.trace_file = trace_file;
+                }
+                Err(e) => {
+                    self.status = format!("Trace start failed: {e}");
+                }
+            }
+        }
     }
 
     pub(crate) fn stop(&mut self) {
@@ -472,6 +503,7 @@ impl SimApp {
                 focus_address: i.consume_key(Modifiers::NONE, Key::G),
                 names: i.consume_key(Modifiers::NONE, Key::X),
                 view: i.consume_key(Modifiers::NONE, Key::V),
+                trace: i.consume_key(Modifiers::NONE, Key::T),
                 clear: i.consume_key(Modifiers::SHIFT, Key::C),
                 follow: i.consume_key(Modifiers::SHIFT, Key::P),
                 set_pc_cursor: i.consume_key(Modifiers::NONE, Key::P),
@@ -547,6 +579,9 @@ impl SimApp {
                 ViewMode::Word => ViewMode::Byte,
                 ViewMode::Byte => ViewMode::Word,
             };
+        }
+        if actions.trace {
+            self.toggle_trace();
         }
         if actions.clear {
             self.clear_cursor();
@@ -669,4 +704,31 @@ fn parse_hex(text: &str) -> Option<u32> {
         return None;
     }
     u32::from_str_radix(digits, 16).ok()
+}
+
+/// Format Unix seconds as an ISO-8601 UTC string like `2026-10-04T14:28:19Z`.
+fn chrono_lite(secs: u64) -> String {
+    let days = secs / 86_400;
+    let mut rem = secs % 86_400;
+    let hours = rem / 3600;
+    rem %= 3600;
+    let minutes = rem / 60;
+    let seconds = rem % 60;
+
+    // Days since epoch → year/month/day (algorithm from Howard Hinnant)
+    let z = days + 719_468;
+    let era = z / 146_097;
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1461 + doe / 36_524 - doe / 146_096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = if m <= 2 { y + 1 } else { y };
+
+    format!(
+        "{year:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
+        m, d, hours, minutes, seconds
+    )
 }

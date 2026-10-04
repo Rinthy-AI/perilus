@@ -1,5 +1,5 @@
 use bounded_integer::BoundedU32;
-use std::{io, path::PathBuf, slice};
+use std::{ffi::CString, io, path::PathBuf, slice};
 
 unsafe extern "C" {
     fn perilus_init();
@@ -15,6 +15,8 @@ unsafe extern "C" {
     fn perilus_set_register(reg: u32, value: u32);
     fn perilus_get_memory() -> *const u32;
     fn perilus_set_memory(address: u32, value: u32);
+    unsafe fn start_vcd(filename: *const std::ffi::c_char);
+    unsafe fn stop_vcd();
 }
 
 pub type Register = BoundedU32<0, 31>;
@@ -103,6 +105,23 @@ impl Perilus {
     }
     pub fn save_file(&self, file: PathBuf) -> io::Result<()> {
         std::fs::write(file, self.memory_bytes())
+    }
+    pub fn start_trace(&self, file: PathBuf) -> io::Result<()> {
+        // Ensure the parent directory exists (VCD file will be created by Verilator)
+        if let Some(parent) = file.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let c_string = CString::new(file.to_string_lossy().as_bytes())
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+        unsafe {
+            start_vcd(c_string.as_ptr());
+        }
+        Ok(())
+    }
+    pub fn stop_trace(&self) {
+        unsafe {
+            stop_vcd();
+        }
     }
 }
 

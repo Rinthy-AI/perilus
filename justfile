@@ -33,7 +33,7 @@ chisel force='':
 [arg("force", long="force", value="1")]
 verilate force='':
     if [ -n "{{force}}" ] || [ $(find generated/ -name "**.sv" -newer "verilated/.timestamp" 2>&1 | wc -l) != 0 ]; then
-        verilator --build --public-flat-rw --Mdir verilated --cc \
+        verilator --build --trace-vcd --public-flat-rw --Mdir verilated --cc \
             generated/Perilus.sv \
             generated/Memory.sv \
             generated/RegisterFile.sv \

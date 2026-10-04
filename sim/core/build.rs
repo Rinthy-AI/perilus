@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .include(&verilated_dir)
         .warnings(false)
         .file("src/wrapper.cpp")
+        .file(format!("{verilator_root}/include/verilated_vcd_c.cpp"))
         .compile("wrapper");
 
     println!("cargo:rustc-link-search=native={}", verilated_dir.display());

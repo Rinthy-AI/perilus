@@ -43,5 +43,11 @@ impl SimApp {
                 self.save_memory();
             }
         });
+        ui.horizontal_wrapped(|ui| {
+            let mut tracing = self.tracing;
+            if ui.toggle_value(&mut tracing, "Trace [t]").changed() {
+                self.toggle_trace();
+            }
+        });
     }
 }
