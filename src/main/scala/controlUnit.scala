@@ -47,7 +47,9 @@ class ControlUnit(withDebug: Boolean = false) extends Module {
   io.regWrite := false.B
   io.resultSrc := ResultSrc.aluOutBuf
 
-  when(io.op === Opcode.load || io.op === Opcode.store) {
+  when(
+    (state === ControlUnitState.memRead || state === ControlUnitState.memWb || state === ControlUnitState.memWrite) && (io.op === Opcode.load || io.op === Opcode.store)
+  ) {
     when(io.funct3 === 0.U || io.funct3 === 4.U) {
       io.dataMask := DataMask.byte
     }.elsewhen(io.funct3 === 1.U || io.funct3 === 5.U) {
