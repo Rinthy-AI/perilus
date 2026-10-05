@@ -281,15 +281,11 @@ class InstructionDecoder extends Module {
     val immSrc = Output(ImmSrc())
   })
 
-  io.immSrc := ImmSrc.iTypeSigned
+  io.immSrc := ImmSrc.iType
 
   switch(io.op) {
     is(Opcode.load) {
-      when(io.funct3 === 4.U || io.funct3 === 5.U) {
-        io.immSrc := ImmSrc.iTypeUnsigned
-      }.otherwise {
-        io.immSrc := ImmSrc.iTypeSigned
-      }
+      io.immSrc := ImmSrc.iType
     }
     is(Opcode.store) {
       io.immSrc := ImmSrc.sType
@@ -298,11 +294,7 @@ class InstructionDecoder extends Module {
       io.immSrc := ImmSrc.bType
     }
     is(Opcode.immediate) {
-      when(io.funct3 === 3.U) {
-        io.immSrc := ImmSrc.iTypeUnsigned
-      }.otherwise {
-        io.immSrc := ImmSrc.iTypeSigned
-      }
+      io.immSrc := ImmSrc.iType
     }
     is(Opcode.jal) {
       io.immSrc := ImmSrc.jType

@@ -11,8 +11,7 @@ class ExtendUnitTests extends AnyFunSpec with ChiselSim {
     it("correctly extends I-type immediates") {
       simulate(new ExtendUnit) { extendUnit =>
         {
-          // TODO include iTypeUnsigned as well
-          extendUnit.io.immSrc.poke(ImmSrc.iTypeSigned)
+          extendUnit.io.immSrc.poke(ImmSrc.iType)
 
           extendUnit.io.input.poke("hdc4691".U) // immediate value is 0xe9b
           extendUnit.io.immExt.expect("h6e2".U)

@@ -335,7 +335,9 @@ class PerilusTests extends AnyFunSpec with ChiselSim {
           rs1 = 24,
           rs1Value = 0x9efde28d,
           imm = 0xdf6,
-          operation = (rs1, imm) => if (toULong(rs1) < toULong(imm)) 1 else 0
+          operation = (rs1, imm) => {
+            if (toULong(rs1) < toULong((imm << 20) >> 20)) 1 else 0
+          }
         )
       }
       it("xori") {
