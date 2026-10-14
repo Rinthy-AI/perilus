@@ -4,6 +4,10 @@
   inputs = {
     stable-pkgs.url = "github:nixos/nixpkgs?ref=nixos-26.05";
     unstable-pkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "stable-pkgs";
+    };
   };
 
   outputs =
@@ -11,6 +15,7 @@
       self,
       stable-pkgs,
       unstable-pkgs,
+      fenix,
     }:
     let
       system = "x86_64-linux";
@@ -32,14 +37,25 @@
         libxcb
       ];
       lib-path = with stable; lib.makeLibraryPath libInputs;
+
+      rustToolchain =
+        (fenix.packages.${system}.toolchainOf {
+          channel = "1.95.0";
+          sha256 = "821ff14e4c4a1cbe1e8915f35aff0a3fbbdf8d293ad48ab8f31e3b0440c581f9";
+        }).withComponents
+          [
+            "cargo"
+            "clippy"
+            "rustc"
+            "rustfmt"
+            "rust-std"
+          ];
     in
     {
       devShells.${system}.default = stable.mkShellNoCC {
         packages = with stable; [
           act
           bundler
-          cargo
-          clippy
           coursier
           gcc
           git
@@ -52,8 +68,7 @@
           pkgsCross.riscv64-embedded.gcc
           ruby
           rust-analyzer
-          rustc
-          rustfmt
+          rustToolchain
           sbt
           surfer
           typst
