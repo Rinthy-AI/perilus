@@ -16,11 +16,7 @@ class Alu extends Module {
   io.lessThan := false.B
 
   val srcBShift = WireInit(0.U)
-  when(io.srcB(5)) {
-    srcBShift := 32.U
-  }.otherwise {
-    srcBShift := io.srcB(4, 0)
-  }
+  srcBShift := io.srcB(4, 0)
 
   switch(io.aluControl) {
     is(AluControl.add) {
@@ -28,7 +24,6 @@ class Alu extends Module {
     }
     is(AluControl.sub) {
       io.aluResult := io.srcA - io.srcB
-      io.zero := io.aluResult === 0.U
     }
     is(AluControl.sll) {
       io.aluResult := io.srcA << srcBShift
@@ -57,6 +52,8 @@ class Alu extends Module {
       io.aluResult := io.srcA & io.srcB
     }
   }
+
+  io.zero := io.aluResult === 0.U
 }
 
 object AluControl extends ChiselEnum {
