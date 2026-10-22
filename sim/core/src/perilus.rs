@@ -6,6 +6,7 @@ unsafe extern "C" {
     fn perilus_eval();
     fn perilus_drop();
     fn perilus_increment_time();
+    fn perilus_reset_time();
     fn perilus_set_clock(new_clock: u32);
     fn perilus_get_pc() -> u32;
     fn perilus_set_pc(new_pc: u32);
@@ -45,6 +46,7 @@ impl Perilus {
     }
     pub fn reset(&self) {
         unsafe {
+            perilus_reset_time();
             perilus_set_reset(1);
             self.pulse_clock();
             perilus_set_reset(0);
@@ -134,9 +136,15 @@ impl Drop for Perilus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    // The Verilator model lives in process-global state, so tests must not initialize it
+    // concurrently.
+    static TEST_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn memory_roundtrip() {
+        let _guard = TEST_LOCK.lock().unwrap();
         let perilus = Perilus::init();
         let data = [0xde, 0xad, 0xbe, 0xef, 0x01, 0x02, 0x03];
         perilus.load_bytes(&data).unwrap();
@@ -147,5 +155,31 @@ mod tests {
 
         let oversized = vec![0u8; Perilus::MEMORY_SIZE_BYTES + 1];
         assert!(perilus.load_bytes(&oversized).is_err());
+    }
+
+    #[test]
+    fn trace_starts_at_time_zero() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        let perilus = Perilus::init();
+
+        // Advance the simulation well past zero before enabling tracing
+        for _ in 0..1000 {
+            perilus.pulse_clock();
+        }
+
+        let path = std::env::temp_dir().join("perilus-trace-test.vcd");
+        perilus.start_trace(path.clone()).unwrap();
+        for _ in 0..10 {
+            perilus.pulse_clock();
+        }
+        perilus.stop_trace();
+
+        let contents = std::fs::read_to_string(&path).unwrap();
+        let first_timestamp = contents
+            .lines()
+            .find_map(|line| line.strip_prefix('#'))
+            .expect("VCD contains no timestamps");
+        assert_eq!(first_timestamp, "0", "trace should start at time zero");
+        let _ = std::fs::remove_file(path);
     }
 }

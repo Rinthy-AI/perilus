@@ -38,10 +38,16 @@ extern "C" {
     void perilus_increment_time() {
         ctx->timeInc(1);
     }
+    void perilus_reset_time() {
+        if (vcd == nullptr) {
+            ctx->time(0);
+        }
+    }
     void start_vcd(const char* filename) {
         Verilated::traceEverOn(true);
         vcd = new VerilatedVcdC;
         perilus->trace(vcd, 99);
+        ctx->time(0);
         vcd->open(filename);
     }
     void stop_vcd() {
